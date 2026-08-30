@@ -1,6 +1,6 @@
-from . import ui as ui
+from todo_app.ui import interface
 import asyncio
 
 
 def main() -> None:
-    asyncio.run(ui.interface())
+    asyncio.run(interface())
