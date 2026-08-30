@@ -1,2 +1,6 @@
+from . import ui as ui
+import asyncio
+
+
 def main() -> None:
-    print("Hello from todo-app!")
+    asyncio.run(ui.interface())
