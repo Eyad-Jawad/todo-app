@@ -10,5 +10,4 @@ class Todo(Base):
     user_id: Mapped[int] = mapped_column()
     todo_text: Mapped[str] = mapped_column()
     creation_date: Mapped[datetime] = mapped_column()
-    last_edit_date: Mapped[datetime | None] = mapped_column()
     is_done: Mapped[bool] = mapped_column()

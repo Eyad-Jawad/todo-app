@@ -10,12 +10,13 @@ requires-python = ">=3.11"
 dependencies = [
     "aiosqlite>=0.22.1",
     "fastapi>=0.141.1",
+    "readchar>=4.2.2",
     "rich>=15.0.0",
     "sqlalchemy>=2.0.52",
 ]
 
 [project.scripts]
-todo-app = "todo_app:main"
+todo-app = "todo_app.main:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
