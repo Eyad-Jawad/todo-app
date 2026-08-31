@@ -10,3 +10,7 @@ wheels/
 .venv
 
 .vs
+
+# Database
+todo_app.db
+*.db
