@@ -2,12 +2,20 @@ import readchar
 
 from textwrap import dedent
 from datetime import datetime, UTC
+from enum import Enum, auto
 
 from rich.console import Console
-from sqlalchemy import select, delete, insert
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from todo_app.db import init_db, get_session
 from todo_app.db.models import Todo
+
+class KeyAction(Enum):
+    NOTHING = auto()
+    DB_CHANGED = auto()
+    LINE_CHANGED = auto()
+    QUIT = auto()
+
 
 CONTROLS_STR = dedent("""
     Press:
@@ -40,28 +48,42 @@ async def interface(user_id: int = 0):
         console.print(format_todos(todos, current_line, console))
 
         while True:
-            key = readchar.readkey()
-
-            if key == readchar.key.ENTER:
-                todos[current_line].is_done = not todos[current_line].is_done
-                await session.commit()
-            elif key == readchar.key.DOWN:
-                current_line = handle_value_changing(current_line, 1, len(todos))
-            elif key == readchar.key.UP:
-                current_line = handle_value_changing(current_line, -1, len(todos))
-            elif key.lower() == "a":
-                await add_todo(user_id, session)
-            elif key.lower() == "d":
-                await delete_todo(session, todos[current_line])
-            elif key.lower() == "q":
+            current_line, action = await handle_keys(todos, current_line, session, user_id)
+            if action == KeyAction.QUIT:
                 console.clear()
                 break
-            else: 
+            elif action == KeyAction.DB_CHANGED:
+                todos = await get_todos(session, user_id)
+            elif action == KeyAction.NOTHING:
                 continue
 
-            todos = await get_todos(session, user_id)
             console.clear()
             console.print(format_todos(todos, current_line, console))
+
+
+async def handle_keys(todos: list[Todo], current_line: int, session: AsyncSession, user_id: int):
+    key = readchar.readkey()
+
+    if key == readchar.key.ENTER:
+        todos[current_line].is_done = not todos[current_line].is_done
+        await session.commit()
+        return current_line, KeyAction.DB_CHANGED
+    elif key == readchar.key.DOWN:
+        current_line = move_cursor(current_line, 1, len(todos))
+        return current_line, KeyAction.LINE_CHANGED
+    elif key == readchar.key.UP:
+        current_line = move_cursor(current_line, -1, len(todos))
+        return current_line, KeyAction.LINE_CHANGED
+    elif key.lower() == "a":
+        await add_todo(user_id, session)
+        return current_line, KeyAction.DB_CHANGED
+    elif key.lower() == "d":
+        await delete_todo(session, todos[current_line])
+        return current_line - 1, KeyAction.DB_CHANGED
+    elif key.lower() == "q":
+        return 0, KeyAction.QUIT
+    else:
+        return current_line, KeyAction.NOTHING
 
 
 def format_todos(todos: list[Todo], current_line: int, console: Console) -> str:
@@ -80,44 +102,36 @@ def format_todos(todos: list[Todo], current_line: int, console: Console) -> str:
     return f"{CONTROLS_STR}\n{s}"
 
 
-def is_done(todo: Todo) -> str:
+def todo_symbol_maker(todo: Todo) -> str:
     return FILLED_SQUARE if todo.is_done else EMPTY_SQUARE
 
 def select_window(todos: list[Todo], current_idx: int, window_length: int) -> list[str]:
     n = len(todos)
 
     if n <= window_length:
-        result = []
-        for i, todo in enumerate(todos):
-            square = is_done(todo)
-            text = todo.todo_text
-
-            if i == current_idx:
-                result.append(f"> {square} [bold black on cyan]{text}[/]")
-            else:
-                result.append(f"  {square} {text}")
-
-        return result
+        return [
+            format_todo(todo, i == current_idx)
+            for i, todo in enumerate(todos)
+        ]
 
     offset = window_length // 2
     result = []
 
     for i in range(-offset, offset + 1):
-        if i == 0:
-            square = is_done(todos[current_idx])
-            text = todos[current_idx].todo_text
-            
-            result.append(f"> {square} [bold black on cyan]{text}[/]")
-            continue
-
         idx = (current_idx + i) % n
-
-        square = is_done(todos[idx])
-        text = todos[idx].todo_text
-
-        result.append(f"  {square} {text}")
+        result.append(format_todo(todos[idx], i == 0))
 
     return result
+
+
+def format_todo(todo: Todo, is_selected: bool) -> str:
+    square = todo_symbol_maker(todo)
+    text = todo.todo_text
+
+    if is_selected:
+        return f"> {square} [bold black on cyan]{text}[/]"
+
+    return f"  {square} {text}"
 
 
 def is_str_fit_terminal(s: str, console: Console) -> bool:
@@ -129,17 +143,8 @@ def is_str_fit_terminal(s: str, console: Console) -> bool:
     return len(s) < console_size
 
 
-def handle_value_changing(value: int, add: int, length: int) -> int:
-    if add < -1: add = -1
-    elif add >= 0: add = 1
-
-    if value + add == length:
-        return 0
-
-    if value + add < 0:
-        return length - 1
-
-    return value + add
+def move_cursor(current_line: int, direction: int, length: int) -> int:
+    return (current_line + direction) % length
 
 
 async def get_todos(session: AsyncSession, user_id: int) -> list[Todo]:
@@ -151,17 +156,17 @@ async def get_todos(session: AsyncSession, user_id: int) -> list[Todo]:
 async def add_todo(user_id: int, session: AsyncSession) -> None:
     text = input("Please input the todo text:\n")
 
-    stmt = insert(Todo).values(
+    todo = Todo(
         user_id=user_id, 
         todo_text=text, 
         creation_date=datetime.now(tz=UTC), 
         is_done=False,
     )
-    await session.execute(stmt)
+
+    session.add(todo)
     await session.commit()
 
 
 async def delete_todo(session: AsyncSession, todo: Todo) -> None:
-    stmt = delete(Todo).where(Todo.todo_id == todo.todo_id)
-    await session.execute(stmt)
+    session.delete(todo)
     await session.commit()
