@@ -11,6 +11,6 @@ wheels/
 
 .vs
 
-# Database
+# Database files
 todo_app.db
 *.db

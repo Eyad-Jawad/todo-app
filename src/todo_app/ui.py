@@ -9,6 +9,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from todo_app.db import init_db, get_session
 from todo_app.db.models import Todo
 
+CONTROLS_STR = dedent("""
+    Press:
+        [cyan](Enter)[/] to toggle the todo
+        [cyan](A)[/]dd to add a new todo
+        [red](D)[/]elete to delete a highlighted todo
+        [red](Q)[/]uit to quit the app
+""")
+
+EMPTY_LIST_STR = dedent("""
+    You currently have no todo, press:
+        [cyan](A)[/]dd to add a new todo
+        [red](Q)[/]uit to quit the app
+""")
+
+SMALL_TERMINAL_STR = "Terminal too small to show anything"
+
+EMPTY_SQUARE = "□"
+FILLED_SQUARE = "■"
+
+
 async def interface(user_id: int = 0):
     await init_db()
 
@@ -23,7 +43,8 @@ async def interface(user_id: int = 0):
             key = readchar.readkey()
 
             if key == readchar.key.ENTER:
-                todos[current_line].is_done = True if not todos[current_line].is_done else False
+                todos[current_line].is_done = not todos[current_line].is_done
+                await session.commit()
             elif key == readchar.key.DOWN:
                 current_line = handle_value_changing(current_line, 1, len(todos))
             elif key == readchar.key.UP:
@@ -44,32 +65,13 @@ async def interface(user_id: int = 0):
 
 
 def format_todos(todos: list[Todo], current_line: int, console: Console) -> str:
-    CONTROLS_STR = dedent("""
-        Press:
-            [cyan](Enter)[/] to toggle the todo
-            [cyan](A)[/]dd to add a new todo
-            [red](D)[/]elete to delete a highlighted todo
-            [red](Q)[/]uit to quit the app
-    """)
-
-    EMPTY_LIST_STR = dedent("""
-        You currently have no todo, press:
-            [cyan](A)[/]dd to add a new todo
-            [red](Q)[/]uit to quit the app
-    """)
-
-    SMALL_TERMINAL_STR = "Terminal too small to show anything"
-
     if len(todos) == 0:
         if is_str_fit_terminal(EMPTY_LIST_STR, console):
             return EMPTY_LIST_STR
 
         return SMALL_TERMINAL_STR
 
-    if console.height <= 5:
-        return SMALL_TERMINAL_STR
-
-    if not is_str_fit_terminal(CONTROLS_STR, console):
+    if console.height <= 5 or not is_str_fit_terminal(CONTROLS_STR, console):
         return SMALL_TERMINAL_STR
 
     window = select_window(todos, current_line, console.height - 5)
@@ -78,41 +80,42 @@ def format_todos(todos: list[Todo], current_line: int, console: Console) -> str:
     return f"{CONTROLS_STR}\n{s}"
 
 
-def select_window(todos: list[Todo], current_idx: int, window_length: int) -> list[str]:
-    EMPTY_SQUARE = "□"
-    FILLED_SQUARE = "■"
+def is_done(todo: Todo) -> str:
+    return FILLED_SQUARE if todo.is_done else EMPTY_SQUARE
 
+def select_window(todos: list[Todo], current_idx: int, window_length: int) -> list[str]:
     n = len(todos)
 
     if n <= window_length:
         result = []
         for i, todo in enumerate(todos):
-            is_done = FILLED_SQUARE if todo.is_done else EMPTY_SQUARE
+            square = is_done(todo)
+            text = todo.todo_text
 
             if i == current_idx:
-                result.append(f"> {is_done} [bold black on cyan]{todo.todo_text}[/]")
+                result.append(f"> {square} [bold black on cyan]{text}[/]")
             else:
-                result.append(f"  {is_done} {todo.todo_text}")
+                result.append(f"  {square} {text}")
 
         return result
 
-
     offset = window_length // 2
-
     result = []
 
-    for i in range(-offset, ):
-        idx = (current_idx + i) % n
-        is_done = FILLED_SQUARE if todos[idx].is_done else EMPTY_SQUARE
-        result.append(f"  {is_done} {todos[idx].todo_text}")
+    for i in range(-offset, offset + 1):
+        if i == 0:
+            square = is_done(todos[current_idx])
+            text = todos[current_idx].todo_text
+            
+            result.append(f"> {square} [bold black on cyan]{text}[/]")
+            continue
 
-    is_done = FILLED_SQUARE if todos[current_idx].is_done else EMPTY_SQUARE
-    result.append(f"> {is_done} [bold black on cyan]{todos[current_idx].todo_text}[/]")
-
-    for i in range(1, offset + 1):
         idx = (current_idx + i) % n
-        is_done = FILLED_SQUARE if todos[idx].is_done else EMPTY_SQUARE
-        result.append(f"  {is_done} {todos[idx].todo_text}")
+
+        square = is_done(todos[idx])
+        text = todos[idx].todo_text
+
+        result.append(f"  {square} {text}")
 
     return result
 
