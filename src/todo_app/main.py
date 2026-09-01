@@ -1,5 +1,6 @@
-from todo_app.ui import interface
 import asyncio
+
+from todo_app.ui import interface
 
 
 def main() -> None:

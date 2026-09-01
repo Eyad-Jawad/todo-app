@@ -1,18 +1,19 @@
+from unittest.mock import AsyncMock, MagicMock, call, patch
+
 import pytest
 import readchar
 
-from unittest.mock import MagicMock, patch, call, AsyncMock
 from todo_app.ui import (
-    interface,
-    key_event_handler,
-    handle_keys,
-    format_todos,
-    todo_symbol_maker,
-    select_window,
-    format_todo,
-    is_str_fit_terminal,
-    move_cursor,
     KeyAction,
+    format_todo,
+    format_todos,
+    handle_keys,
+    interface,
+    is_str_fit_terminal,
+    key_event_handler,
+    move_cursor,
+    select_window,
+    todo_symbol_maker,
 )
 
 
@@ -44,22 +45,22 @@ def test_move_cursor_with_underflow():
 
 
 def test_is_str_fit_with_fit_str(mock_console):
-    s = 'a' * 20
+    s = "a" * 20
     assert is_str_fit_terminal(s, mock_console) == True
 
 
 def test_is_str_fit_with_height_fit_str(mock_console):
-    s = '\n' * 4
+    s = "\n" * 4
     assert is_str_fit_terminal(s, mock_console) == True
 
 
 def test_is_str_fit_with_size_unfit_str(mock_console):
-    s = 'a' * 200
+    s = "a" * 200
     assert is_str_fit_terminal(s, mock_console) == False
 
 
 def test_is_str_fit_with_height_unfit_str(mock_console):
-    s = '\n' * 6
+    s = "\n" * 6
     assert is_str_fit_terminal(s, mock_console) == False
 
 
@@ -78,6 +79,7 @@ def test_format_todo_with_not_selected_todo():
 
     assert format_todo(todo, False) == "  ■ Task"
 
+
 @pytest.mark.parametrize(
     "window_length",
     [10, 5],
@@ -87,7 +89,10 @@ def test_select_window(mock_format, window_length):
     mock_format.return_value = "a str to make tests simple"
     simple_list = [1, 2, 3, 4, 5]
 
-    assert select_window(simple_list, 3, window_length) == ["a str to make tests simple"] * 5
+    assert (
+        select_window(simple_list, 3, window_length)
+        == ["a str to make tests simple"] * 5
+    )
     assert mock_format.call_count == 5
     assert mock_format.call_args_list == [
         call(1, False),
@@ -96,6 +101,7 @@ def test_select_window(mock_format, window_length):
         call(4, True),
         call(5, False),
     ]
+
 
 @pytest.mark.parametrize(
     ("is_done, output"),
@@ -158,7 +164,7 @@ def test_format_todos_with_unfit_str(mock_is_fit):
 def test_format_todos_with_fit_str(mock_is_fit, mock_select):
     mock_is_fit.return_value = True
     mock_select.return_value = ["1", "2"]
-    
+
     console = MagicMock()
     console.height = 6
     assert format_todos([1], 0, console) == "str\n1\n2"
@@ -244,7 +250,7 @@ async def test_handle_keys_with_q(mock_readchar, key):
     assert await handle_keys([1], 1, 3, 2) == (0, KeyAction.QUIT)
 
 
-@pytest.mark.asyncio 
+@pytest.mark.asyncio
 @patch("readchar.readkey")
 @pytest.mark.parametrize(
     "key",
@@ -263,8 +269,8 @@ async def test_handle_keys_for_invalid_key(mock_readchar, key):
 async def test_key_event_loop(mock_handle, mock_get, mock_format, mock_console):
     mock_handle.side_effect = [
         (0, KeyAction.DB_CHANGED),
-        (1, KeyAction.LINE_CHANGED), 
-        (1, KeyAction.NOTHING), 
+        (1, KeyAction.LINE_CHANGED),
+        (1, KeyAction.NOTHING),
         (0, KeyAction.QUIT),
     ]
 
@@ -295,6 +301,7 @@ class AsyncContextManager:
     async def __aexit__(self, exc_type, exc, tb):
         pass
 
+
 @pytest.mark.asyncio
 @patch("todo_app.ui.init_db", new_callable=AsyncMock)
 @patch("todo_app.ui.get_session")
@@ -302,7 +309,15 @@ class AsyncContextManager:
 @patch("todo_app.ui.get_todos", new_callable=AsyncMock)
 @patch("todo_app.ui.format_todos")
 @patch("todo_app.ui.key_event_handler", new_callable=AsyncMock)
-async def test_interface(mock_event_handler, mock_format, mock_get, mock_console_, mock_session, mock_init, mock_console):
+async def test_interface(
+    mock_event_handler,
+    mock_format,
+    mock_get,
+    mock_console_,
+    mock_session,
+    mock_init,
+    mock_console,
+):
     session = MagicMock()
 
     instance = AsyncContextManager()
@@ -331,4 +346,3 @@ async def test_interface(mock_event_handler, mock_format, mock_get, mock_console
     mock_console.print.assert_called_once_with("str")
 
     mock_event_handler.assert_awaited_once_with(None, mock_console, 2, [1], 0)
-

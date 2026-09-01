@@ -1,21 +1,25 @@
-from pathlib import Path
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from pathlib import Path
 
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-
-
-DB_PATH = Path(__file__).resolve().parent # todo-app/db
-
-engine = create_async_engine(
-    "sqlite+aiosqlite:///todo_app.db"
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
 )
+from sqlalchemy.orm import DeclarativeBase
+
+DB_PATH = Path(__file__).resolve().parent
+
+engine = create_async_engine("sqlite+aiosqlite:///todo_app.db")
+
 
 class Base(DeclarativeBase):
     pass
 
+
 local_session = async_sessionmaker(bind=engine)
+
 
 async def init_db() -> None:
     from . import models as models
@@ -36,4 +40,3 @@ async def get_session() -> AsyncGenerator[AsyncSession]:
     finally:
         await session.commit()
         await session.close()
-        

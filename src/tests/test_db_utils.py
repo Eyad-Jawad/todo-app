@@ -1,11 +1,12 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from todo_app.db.models import Todo
-from unittest.mock import MagicMock, patch, AsyncMock
 from todo_app.db.utils import (
-    get_todos,
     add_todo,
     delete_todo,
+    get_todos,
     toggle_todo,
 )
 
@@ -32,10 +33,9 @@ async def test_toggle(mock_session):
 
 @pytest.mark.asyncio
 async def test_delete(mock_session):
-    mock_session.delete = MagicMock()
     await delete_todo(mock_session, 1)
 
-    mock_session.delete.assert_called_once_with(1)
+    mock_session.delete.assert_awaited_once_with(1)
     mock_session.commit.assert_awaited_once()
 
 
@@ -53,7 +53,7 @@ async def test_add_todo(mock_input, mock_time, mock_session):
 
     mock_input.assert_called_once()
 
-    args, kwagrs = mock_session.add.call_args_list[0]
+    args, _kwagrs = mock_session.add.call_args_list[0]
     todo = args[0]
 
     assert todo.user_id == 1
@@ -62,9 +62,8 @@ async def test_add_todo(mock_input, mock_time, mock_session):
     assert todo.is_done == False
 
     mock_time.now.assert_called_once_with(tz="val")
-    
+
     mock_session.commit.assert_awaited_once()
-    
 
 
 @pytest.mark.asyncio
@@ -72,7 +71,6 @@ async def test_add_todo(mock_input, mock_time, mock_session):
 async def test_get_todos(mock_select, mock_session):
     stmt = MagicMock()
     mock_select.return_value.where.return_value = stmt
-
 
     todo = MagicMock()
 
@@ -85,4 +83,3 @@ async def test_get_todos(mock_select, mock_session):
     mock_select.assert_called_once_with(Todo)
 
     mock_session.execute.assert_awaited_once_with(stmt)
-

@@ -1,18 +1,20 @@
-import readchar
-
-from textwrap import dedent
+from collections.abc import Sequence
 from enum import Enum, auto
+from textwrap import dedent
 
+import readchar
 from rich.console import Console
 from sqlalchemy.ext.asyncio import AsyncSession
-from todo_app.db import init_db, get_session
+
+from todo_app.db import get_session, init_db
 from todo_app.db.models import Todo
 from todo_app.db.utils import (
-    get_todos, 
-    add_todo, 
-    delete_todo, 
+    add_todo,
+    delete_todo,
+    get_todos,
     toggle_todo,
 )
+
 
 class KeyAction(Enum):
     NOTHING = auto()
@@ -55,14 +57,16 @@ async def interface(user_id: int = 0) -> None:
 
 
 async def key_event_handler(
-    session: AsyncSession, 
-    console: Console, 
-    user_id: int, 
-    todos: list[Todo], 
-    current_line: int
+    session: AsyncSession,
+    console: Console,
+    user_id: int,
+    todos: Sequence[Todo],
+    current_line: int,
 ) -> None:
     while True:
-        current_line, action = await handle_keys(todos, current_line, session, user_id)
+        current_line, action = await handle_keys(
+            todos, current_line, session, user_id
+        )
         if action == KeyAction.QUIT:
             console.clear()
             break
@@ -76,11 +80,11 @@ async def key_event_handler(
 
 
 async def handle_keys(
-    todos: list[Todo], 
-    current_line: int, 
-    session: AsyncSession, 
-    user_id: int
-) -> tuple[int, int]:
+    todos: Sequence[Todo],
+    current_line: int,
+    session: AsyncSession,
+    user_id: int,
+) -> tuple[int, KeyAction]:
     key = readchar.readkey()
 
     if key == readchar.key.ENTER:
@@ -97,14 +101,16 @@ async def handle_keys(
         return current_line, KeyAction.DB_CHANGED
     elif key.lower() == "d":
         await delete_todo(session, todos[current_line])
-        return current_line -1, KeyAction.DB_CHANGED
+        return current_line - 1, KeyAction.DB_CHANGED
     elif key.lower() == "q":
         return 0, KeyAction.QUIT
     else:
         return current_line, KeyAction.NOTHING
 
 
-def format_todos(todos: list[Todo], current_line: int, console: Console) -> str:
+def format_todos(
+    todos: Sequence[Todo], current_line: int, console: Console
+) -> str:
     if len(todos) == 0:
         if is_str_fit_terminal(EMPTY_LIST_STR, console):
             return EMPTY_LIST_STR
@@ -124,13 +130,14 @@ def todo_symbol_maker(todo: Todo) -> str:
     return FILLED_SQUARE if todo.is_done else EMPTY_SQUARE
 
 
-def select_window(todos: list[Todo], current_idx: int, window_length: int) -> list[str]:
+def select_window(
+    todos: Sequence[Todo], current_idx: int, window_length: int
+) -> list[str]:
     n = len(todos)
 
     if n <= window_length:
         return [
-            format_todo(todo, i == current_idx)
-            for i, todo in enumerate(todos)
+            format_todo(todo, i == current_idx) for i, todo in enumerate(todos)
         ]
 
     offset = window_length // 2
@@ -154,7 +161,7 @@ def format_todo(todo: Todo, is_selected: bool) -> str:
 
 
 def is_str_fit_terminal(s: str, console: Console) -> bool:
-    if console.height < s.count('\n'):
+    if console.height < s.count("\n"):
         return False
 
     console_size = console.height * console.width
