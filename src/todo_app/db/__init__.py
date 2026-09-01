@@ -10,9 +10,10 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase
 
-DB_PATH = Path(__file__).resolve().parent
+db_dir = Path(__file__).resolve().parent
+database_path = db_dir / "todo_app.db"
 
-engine = create_async_engine("sqlite+aiosqlite:///todo_app.db")
+engine = create_async_engine(f"sqlite+aiosqlite:///{database_path}")
 
 
 class Base(DeclarativeBase):
