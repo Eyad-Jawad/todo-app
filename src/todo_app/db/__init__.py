@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
@@ -21,14 +22,12 @@ class Base(DeclarativeBase):
 local_session = async_sessionmaker(bind=engine)
 
 
-async def init_db() -> None:
+async def init_db() -> AsyncEngine:
     from . import models as models
 
-    try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-    finally:
-        await engine.dispose()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        return engine
 
 
 @asynccontextmanager

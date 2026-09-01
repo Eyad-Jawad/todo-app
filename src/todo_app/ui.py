@@ -45,7 +45,7 @@ FILLED_SQUARE = "■"
 
 
 async def interface(user_id: int = 0) -> None:
-    await init_db()
+    engine = await init_db()
 
     async with get_session() as session:
         console = Console()
@@ -54,6 +54,8 @@ async def interface(user_id: int = 0) -> None:
 
         console.print(format_todos(todos, current_line, console))
         await key_event_handler(session, console, user_id, todos, current_line)
+
+    await engine.dispose()
 
 
 async def key_event_handler(

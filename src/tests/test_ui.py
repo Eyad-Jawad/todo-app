@@ -318,6 +318,9 @@ async def test_interface(
     mock_init,
     mock_console,
 ):
+    engine = AsyncMock()
+    mock_init.return_value = engine
+
     session = MagicMock()
 
     instance = AsyncContextManager()
@@ -346,3 +349,5 @@ async def test_interface(
     mock_console.print.assert_called_once_with("str")
 
     mock_event_handler.assert_awaited_once_with(None, mock_console, 2, [1], 0)
+
+    engine.dispose.assert_awaited_once()
