@@ -29,6 +29,7 @@ async def delete_todo(session: AsyncSession, todo: Todo) -> None:
     session.delete(todo)
     await session.commit()
 
+
 async def toggle_todo(session: AsyncSession, todo: Todo) -> None:
     todo.is_done = not todo.is_done
     await session.commit()

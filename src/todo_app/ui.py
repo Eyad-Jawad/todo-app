@@ -42,7 +42,7 @@ EMPTY_SQUARE = "□"
 FILLED_SQUARE = "■"
 
 
-async def interface(user_id: int = 0):
+async def interface(user_id: int = 0) -> None:
     await init_db()
 
     async with get_session() as session:
@@ -51,22 +51,36 @@ async def interface(user_id: int = 0):
         todos = await get_todos(session, user_id)
 
         console.print(format_todos(todos, current_line, console))
+        await key_event_handler(session, console, user_id, todos, current_line)
 
-        while True:
-            current_line, action = await handle_keys(todos, current_line, session, user_id)
-            if action == KeyAction.QUIT:
-                console.clear()
-                break
-            elif action == KeyAction.DB_CHANGED:
-                todos = await get_todos(session, user_id)
-            elif action == KeyAction.NOTHING:
-                continue
 
+async def key_event_handler(
+    session: AsyncSession, 
+    console: Console, 
+    user_id: int, 
+    todos: list[Todo], 
+    current_line: int
+) -> None:
+    while True:
+        current_line, action = await handle_keys(todos, current_line, session, user_id)
+        if action == KeyAction.QUIT:
             console.clear()
-            console.print(format_todos(todos, current_line, console))
+            break
+        elif action == KeyAction.DB_CHANGED:
+            todos = await get_todos(session, user_id)
+        elif action == KeyAction.NOTHING:
+            continue
+
+        console.clear()
+        console.print(format_todos(todos, current_line, console))
 
 
-async def handle_keys(todos: list[Todo], current_line: int, session: AsyncSession, user_id: int) -> tuple[int, int]:
+async def handle_keys(
+    todos: list[Todo], 
+    current_line: int, 
+    session: AsyncSession, 
+    user_id: int
+) -> tuple[int, int]:
     key = readchar.readkey()
 
     if key == readchar.key.ENTER:
@@ -83,7 +97,7 @@ async def handle_keys(todos: list[Todo], current_line: int, session: AsyncSessio
         return current_line, KeyAction.DB_CHANGED
     elif key.lower() == "d":
         await delete_todo(session, todos[current_line])
-        return current_line - 1, KeyAction.DB_CHANGED
+        return current_line -1, KeyAction.DB_CHANGED
     elif key.lower() == "q":
         return 0, KeyAction.QUIT
     else:
