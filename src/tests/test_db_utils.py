@@ -40,8 +40,8 @@ async def test_delete(mock_session):
 
 
 @pytest.mark.asyncio
-@patch("todo_app.db.utils.UTC", "val")
-@patch("todo_app.db.utils.datetime")
+@patch("todo_app.db.queries.UTC", "val")
+@patch("todo_app.db.queries.datetime")
 @patch("builtins.input")
 async def test_add_todo(mock_input, mock_time, mock_session):
     mock_input.return_value = "todo"
@@ -67,7 +67,7 @@ async def test_add_todo(mock_input, mock_time, mock_session):
 
 
 @pytest.mark.asyncio
-@patch("todo_app.db.utils.select")
+@patch("todo_app.db.queries.select")
 async def test_get_todos(mock_select, mock_session):
     stmt = MagicMock()
     mock_select.return_value.where.return_value = stmt

@@ -1,7 +1,10 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
-from todo_app.db import init_db
 from pydantic import BaseModel
+
+from todo_app.db import init_db
+
 
 class Creditential(BaseModel):
     username: str
@@ -10,6 +13,7 @@ class Creditential(BaseModel):
 
 class Token(BaseModel):
     access_token: str
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):

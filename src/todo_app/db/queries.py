@@ -43,7 +43,9 @@ async def get_user(username: str, session: AsyncSession) -> User | None:
     return result.scalar_one_or_none()
 
 
-async def get_user_session(access_token: str, session: AsyncSession) -> User | None:
+async def get_user_session(
+    access_token: str, session: AsyncSession
+) -> User | None:
     stmt = select(User).where(User.access_token == access_token)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
