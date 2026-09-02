@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from todo_app.db.models import Todo
+from todo_app.db.models import Todo, User
 
 
 async def get_todos(session: AsyncSession, user_id: int) -> Sequence[Todo]:
@@ -35,3 +35,15 @@ async def delete_todo(session: AsyncSession, todo: Todo) -> None:
 async def toggle_todo(session: AsyncSession, todo: Todo) -> None:
     todo.is_done = not todo.is_done
     await session.commit()
+
+
+async def get_user(username: str, session: AsyncSession) -> User | None:
+    stmt = select(User).where(User.username == username)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def get_user_session(access_token: str, session: AsyncSession) -> User | None:
+    stmt = select(User).where(User.access_token == access_token)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()

@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from todo_app.db.models import Todo
-from todo_app.db.utils import (
+from todo_app.db.queries import (
     add_todo,
     delete_todo,
     get_todos,
