@@ -26,7 +26,14 @@ def rate_limiter(
 ):
     async def dependency(request: Request):
         api_key = request.headers.get("access_key")
-        identifier = api_key or request.client.host
+        identifier = api_key or (
+            request.client.host if request.client else None
+        )
+        if identifier is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User has no ip or token.",
+            )
 
         now = int(time.time())
         window_start = now - (now % window)
