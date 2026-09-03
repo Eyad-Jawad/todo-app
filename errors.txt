@@ -1,0 +1,28 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0
+rootdir: /home/eyad/Programming/Python newbie second/todo_app
+configfile: pyproject.toml
+testpaths: src/tests
+plugins: anyio-4.14.2, asyncio-1.4.0, cov-7.1.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 49 items
+
+src/tests/test_db_queries.py ..............                              [ 28%]
+src/tests/test_ui.py ...................................                 [100%]
+
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.11.16-final-0 _______________
+
+Name                                 Stmts   Miss  Cover
+--------------------------------------------------------
+src/todo_app/__init__.py                 0      0   100%
+src/todo_app/auth.py                    41     30    27%
+src/todo_app/db/__init__.py             23      9    61%
+src/todo_app/db/models/__init__.py       2      0   100%
+src/todo_app/db/models/todos.py         12      0   100%
+src/todo_app/db/models/users.py          9      0   100%
+src/todo_app/db/queries.py              46      0   100%
+src/todo_app/ui.py                      95      6    94%
+--------------------------------------------------------
+TOTAL                                  228     45    80%
+============================== 49 passed in 1.76s ==============================

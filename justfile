@@ -1,4 +1,4 @@
-tests:
+all:
     uv run pytest
     uv run black --check .
     uv run ruff check .

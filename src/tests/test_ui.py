@@ -220,7 +220,7 @@ async def test_handle_keys_with_a(mock_readchar, mock_add, key):
 
     assert await handle_keys([1], 0, 3, 2) == (0, KeyAction.DB_CHANGED)
 
-    mock_add.assert_awaited_once_with(2, 3)
+    mock_add.assert_awaited_once_with(3, 2)
 
 
 @pytest.mark.asyncio

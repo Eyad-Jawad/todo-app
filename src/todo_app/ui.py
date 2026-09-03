@@ -99,7 +99,7 @@ async def handle_keys(
         current_line = move_cursor(current_line, -1, len(todos))
         return current_line, KeyAction.LINE_CHANGED
     elif key.lower() == "a":
-        await add_todo(user_id, session)
+        await add_todo(session, user_id)
         return current_line, KeyAction.DB_CHANGED
     elif key.lower() == "d":
         await delete_todo(session, todos[current_line])
