@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo App</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./script.js" defer></script>
+</head>
+<body>
+    <main class="app-shell">
+        <header class="topbar">
+            <div>
+                <h1>Todo App</h1>
+                <p id="account-label" class="muted">Not signed in</p>
+            </div>
+            <button id="logout-button" class="secondary hidden" type="button">Log out</button>
+        </header>
+
+        <section id="auth-view" class="card auth-card">
+            <div class="tabs" role="tablist" aria-label="Authentication">
+                <button id="login-tab" class="tab active" type="button">Login</button>
+                <button id="signup-tab" class="tab" type="button">Sign up</button>
+            </div>
+
+            <form id="auth-form">
+                <label for="username">Username</label>
+                <input id="username" name="username" type="text" autocomplete="username" required>
+
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+                <button id="auth-submit" type="submit">Login</button>
+            </form>
+
+            <p id="auth-status" class="status" aria-live="polite"></p>
+        </section>
+
+        <section id="todo-view" class="hidden">
+            <div class="card add-card">
+                <form id="todo-form">
+                    <label for="todo-text">Add a todo</label>
+                    <div class="add-row">
+                        <input type="text" name="text" id="todo-text" placeholder="What needs to be done?" maxlength="500" required>
+                        <button type="submit">Add</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="section-heading">
+                <h2>Your todos</h2>
+                <button id="refresh-button" class="secondary" type="button">Refresh</button>
+            </div>
+
+            <div id="todos" class="todo-list" aria-live="polite"></div>
+            <p id="todo-status" class="status" aria-live="polite"></p>
+
+            <div class="danger-zone card">
+                <div>
+                    <h3>Delete account</h3>
+                    <p class="muted">This permanently deletes your account and its todos.</p>
+                </div>
+                <button id="delete-account-button" class="danger" type="button">Delete account</button>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

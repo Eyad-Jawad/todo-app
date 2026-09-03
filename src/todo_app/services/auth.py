@@ -35,10 +35,10 @@ async def sign_up(cred: Creditential):
 
 
 @router.post(
-    "/auth/login",
+    "/auth/log_in",
     dependencies=[Depends(rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME))],
 )
-async def login(cred: Creditential):
+async def log_in(cred: Creditential):
     is_len_right(cred)
 
     return await auth.login(cred.username, cred.password)

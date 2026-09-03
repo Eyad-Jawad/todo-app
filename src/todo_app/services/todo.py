@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -51,9 +51,9 @@ async def _get_todo(
     "/todos/all",
     dependencies=[Depends(rate_limiter())],
 )
-async def get_todos(token: Token):
+async def get_todos(access_token: str = Query(...)):
     async with get_session() as session:
-        user = await _get_user(session, token.access_token)
+        user = await _get_user(session, access_token)
 
         if user.todos == []:
             raise HTTPException(

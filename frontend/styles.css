@@ -1,0 +1,276 @@
+:root {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #1f2937;
+    background: #f3f4f6;
+    font-synthesis: none;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+.app-shell {
+    width: min(900px, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: 2rem 0 4rem;
+}
+
+.topbar,
+.section-heading,
+.add-row,
+.danger-zone,
+.todo-item,
+.tabs {
+    display: flex;
+    align-items: center;
+}
+
+.topbar,
+.section-heading,
+.danger-zone {
+    justify-content: space-between;
+}
+
+.topbar {
+    margin-bottom: 1.5rem;
+}
+
+h1,
+h2,
+h3,
+p {
+    margin-top: 0;
+}
+
+h1 {
+    margin-bottom: 0.25rem;
+    font-size: 2rem;
+}
+
+h2 {
+    margin-bottom: 0;
+}
+
+.muted {
+    color: #6b7280;
+}
+
+.card {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 1.25rem;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+}
+
+.auth-card {
+    width: min(440px, 100%);
+    margin: 4rem auto 0;
+}
+
+.tabs {
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.tab {
+    flex: 1;
+    background: transparent;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+}
+
+.tab.active {
+    background: #111827;
+    color: white;
+    border-color: #111827;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+label {
+    font-weight: 600;
+}
+
+input {
+    width: 100%;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid #c7ccd4;
+    border-radius: 9px;
+    outline: none;
+    background: white;
+}
+
+input:focus {
+    border-color: #111827;
+    box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1);
+}
+
+button {
+    border: 0;
+    border-radius: 9px;
+    padding: 0.75rem 1rem;
+    background: #111827;
+    color: white;
+    font-weight: 600;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+button.secondary {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+button.danger {
+    background: #b91c1c;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.add-card {
+    margin-bottom: 1.75rem;
+}
+
+.add-row {
+    gap: 0.75rem;
+}
+
+.add-row input {
+    flex: 1;
+}
+
+.section-heading {
+    margin-bottom: 1rem;
+}
+
+.todo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 4rem;
+}
+
+.todo-item {
+    gap: 0.85rem;
+    padding: 1rem;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+}
+
+.todo-item.done .todo-text {
+    color: #6b7280;
+    text-decoration: line-through;
+}
+
+.todo-check {
+    width: 1.2rem;
+    height: 1.2rem;
+    flex: 0 0 auto;
+}
+
+.todo-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.todo-text {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.todo-date {
+    margin-top: 0.25rem;
+    margin-bottom: 0;
+    font-size: 0.82rem;
+    color: #6b7280;
+}
+
+.todo-delete {
+    background: transparent;
+    color: #b91c1c;
+    padding: 0.4rem 0.6rem;
+}
+
+.empty-state {
+    padding: 2rem;
+    border: 1px dashed #c7ccd4;
+    border-radius: 12px;
+    text-align: center;
+    color: #6b7280;
+}
+
+.status {
+    min-height: 1.5rem;
+    margin: 0.75rem 0 0;
+    color: #4b5563;
+}
+
+.status.error {
+    color: #b91c1c;
+}
+
+.status.success {
+    color: #166534;
+}
+
+.danger-zone {
+    gap: 1rem;
+    margin-top: 2rem;
+    border-color: #fecaca;
+}
+
+.danger-zone h3,
+.danger-zone p {
+    margin-bottom: 0.3rem;
+}
+
+@media (max-width: 640px) {
+    .app-shell {
+        width: min(100% - 1rem, 900px);
+        padding-top: 1rem;
+    }
+
+    .topbar,
+    .danger-zone {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .add-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .todo-item {
+        align-items: flex-start;
+    }
+}
