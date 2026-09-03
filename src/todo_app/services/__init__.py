@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from todo_app.db import init_db
-from todo_app.services import todo, auth
+from todo_app.services import auth, todo
 from todo_app.services.utils import r
 
 

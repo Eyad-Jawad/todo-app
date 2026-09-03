@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status, APIRouter
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from todo_app import auth
 from todo_app.services.utils import Creditential, Token, rate_limiter
