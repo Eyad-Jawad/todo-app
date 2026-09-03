@@ -90,16 +90,11 @@ async def test_delete(mock_session):
 @pytest.mark.asyncio
 @patch("todo_app.db.queries.UTC", "val")
 @patch("todo_app.db.queries.datetime")
-@patch("builtins.input")
-async def test_add_todo(mock_input, mock_time, mock_session):
-    mock_input.return_value = "str"
-
+async def test_add_todo(mock_time, mock_session):
     date = datetime.now(tz=UTC)
     mock_time.now.return_value = date
 
-    await add_todo(mock_session, 1)
-
-    mock_input.assert_called_once()
+    await add_todo(mock_session, 1, "str")
 
     stmt = select(Todo)
     result = await mock_session.execute(stmt)
@@ -139,7 +134,7 @@ async def test_get_todos(mock_session):
 
 @pytest.mark.asyncio
 async def test_get_user_with_no_entry(mock_session):
-    assert await get_user("rand", mock_session) is None
+    assert await get_user(mock_session, "rand") is None
 
 
 @pytest.mark.asyncio
@@ -152,7 +147,7 @@ async def test_get_user_with_one_entry(mock_session):
     )
     await mock_session.commit()
 
-    user = await get_user("Noice", mock_session)
+    user = await get_user(mock_session, "Noice")
 
     assert user.username == "Noice"
     assert user.hash == "Anything"
@@ -160,7 +155,7 @@ async def test_get_user_with_one_entry(mock_session):
 
 @pytest.mark.asyncio
 async def test_get_user_sesison_with_no_entry(mock_session):
-    assert await get_user_session("", mock_session) is None
+    assert await get_user_session(mock_session, "") is None
 
 
 @pytest.mark.asyncio
@@ -172,14 +167,14 @@ async def test_get_user_sesison_with_empty_entry(mock_session):
         )
     )
 
-    assert await get_user_session("", mock_session) is None
+    assert await get_user_session(mock_session, "") is None
 
 
 @pytest.mark.asyncio
 async def test_get_user_sesison_with_one_entry(mock_session):
     mock_session.add(User(username="Noice", hash="Anything", access_token="T"))
 
-    user = await get_user_session("T", mock_session)
+    user = await get_user_session(mock_session, "T")
 
     assert user.username == "Noice"
     assert user.hash == "Anything"

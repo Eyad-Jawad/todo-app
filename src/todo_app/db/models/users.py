@@ -17,5 +17,6 @@ class User(Base):
     access_token: Mapped[str | None] = mapped_column()
 
     todos: Mapped[list["Todo"]] = relationship(
-        back_populates="user", cascade="all, delete"
+        back_populates="user", 
+        cascade="all, delete",
     )

@@ -1,10 +1,11 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, APIRouter
 
 from todo_app import auth
-from todo_app.services import Creditential, Token, app, rate_limiter
+from todo_app.services.utils import Creditential, Token, rate_limiter
 
 REQUESTS_LIMIT = 10
 REQUESTS_LIMIT_TIME = 60 * 5
+router = APIRouter()
 
 
 def is_len_right(cred: Creditential) -> bool:
@@ -23,7 +24,7 @@ def is_len_right(cred: Creditential) -> bool:
     return True
 
 
-@app.post(
+@router.post(
     "/auth/sign_up",
     dependencies=[Depends(rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME))],
 )
@@ -33,7 +34,7 @@ async def sign_up(cred: Creditential):
     return await auth.sign_up(cred.username, cred.password)
 
 
-@app.post(
+@router.post(
     "/auth/login",
     dependencies=[Depends(rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME))],
 )
@@ -43,7 +44,7 @@ async def login(cred: Creditential):
     return await auth.login(cred.username, cred.password)
 
 
-@app.post(
+@router.post(
     "/auth/log_out",
     dependencies=[Depends(rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME))],
 )
@@ -57,7 +58,7 @@ async def log_out(token: Token):
     return await auth.log_out(token.access_token)
 
 
-@app.post(
+@router.delete(
     "/auth/delete_account",
     dependencies=[Depends(rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME))],
 )

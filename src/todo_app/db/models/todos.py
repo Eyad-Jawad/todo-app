@@ -21,5 +21,4 @@ class Todo(Base):
 
     user: Mapped["User"] = relationship(
         back_populates="todos",
-        cascade="all, delete",
     )

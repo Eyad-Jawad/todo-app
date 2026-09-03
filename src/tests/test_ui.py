@@ -209,18 +209,20 @@ async def test_handle_keys_with_up(mock_readchar, mock_move):
 
 
 @pytest.mark.asyncio
+@patch("builtins.input")
 @patch("todo_app.ui.add_todo", new_callable=AsyncMock)
 @patch("readchar.readkey")
 @pytest.mark.parametrize(
     "key",
     ["a", "A"],
 )
-async def test_handle_keys_with_a(mock_readchar, mock_add, key):
+async def test_handle_keys_with_a(mock_readchar, mock_add, mock_input, key):
     mock_readchar.return_value = key
+    mock_input.return_value = "str"
 
     assert await handle_keys([1], 0, 3, 2) == (0, KeyAction.DB_CHANGED)
 
-    mock_add.assert_awaited_once_with(3, 2)
+    mock_add.assert_awaited_once_with(3, 2, "str")
 
 
 @pytest.mark.asyncio

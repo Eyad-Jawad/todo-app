@@ -17,7 +17,7 @@ ph = PasswordHasher()
 
 async def sign_up(username: str, password: str):
     async with get_session() as session:
-        user_ = await get_user(username, session)
+        user_ = await get_user(session, username)
         if user_ is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -33,7 +33,7 @@ async def sign_up(username: str, password: str):
 
 async def login(username: str, password: str):
     async with get_session() as session:
-        user = await get_user(username, session)
+        user = await get_user(session, username)
         if user is None or not verify_password(password, user.hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -47,7 +47,7 @@ async def login(username: str, password: str):
 
 async def log_out(access_token: str):
     async with get_session() as session:
-        user = await get_user_session(access_token, session)
+        user = await get_user_session(session, access_token)
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -61,7 +61,7 @@ async def log_out(access_token: str):
 
 async def delete_account(username: str, password: str):
     async with get_session() as session:
-        user = await get_user(username, session)
+        user = await get_user(session, username)
         if user is None or not verify_password(password, user.hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
