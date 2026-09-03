@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from todo_app.db import get_session, queries
 from todo_app.db.models import Todo, User
-from todo_app.services.utils import Token, rate_limiter
+from todo_app.services.utils import rate_limiter
 
 
 class CreateTodo(BaseModel):
