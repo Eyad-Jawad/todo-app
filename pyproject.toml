@@ -12,6 +12,7 @@ dependencies = [
     "argon2-cffi>=25.1.0",
     "fastapi[standard]>=0.141.1",
     "readchar>=4.2.2",
+    "redis[hiredis]>=8.1.0",
     "rich>=15.0.0",
     "sqlalchemy>=2.0.52",
 ]

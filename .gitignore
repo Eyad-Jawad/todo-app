@@ -1,3 +1,6 @@
+# Creds
+*.env
+
 # Python-generated files
 __pycache__/
 *.py[oc]
@@ -20,3 +23,4 @@ todo_app.db
 .pytest_cache/
 .ruff_cache/
 .coverage
+dump.rdb

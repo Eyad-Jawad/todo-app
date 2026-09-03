@@ -1,8 +1,11 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
 
 from todo_app import auth
-from todo_app.services import Creditential, Token, app
+from todo_app.services import Creditential, Token, app, rate_limiter
 
+
+REQUESTS_LIMIT = 10
+REQUESTS_LIMIT_TIME = 60 * 5
 
 def is_len_right(cred: Creditential) -> bool:
     if not (len(cred.username) <= 16 and len(cred.username) >= 2):
@@ -20,21 +23,21 @@ def is_len_right(cred: Creditential) -> bool:
     return True
 
 
-@app.post("/auth/sign_up")
+@app.post("/auth/sign_up", dependencies=[Depends(rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME))])
 async def sign_up(cred: Creditential):
     is_len_right(cred)
 
     return await auth.sign_up(cred.username, cred.password)
 
 
-@app.post("/auth/login")
+@app.post("/auth/login", dependencies=[Depends(rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME))])
 async def login(cred: Creditential):
     is_len_right(cred)
 
     return await auth.login(cred.username, cred.password)
 
 
-@app.post("/auth/log_out")
+@app.post("/auth/log_out", dependencies=[Depends(rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME))])
 async def log_out(token: Token):
     if len(token.access_token) != 36:  # uuid4 is 36 chars long
         raise HTTPException(
@@ -45,7 +48,7 @@ async def log_out(token: Token):
     return await auth.log_out(token.access_token)
 
 
-@app.post("/auth/delete_account")
+@app.post("/auth/delete_account", dependencies=[Depends(rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME))])
 async def delete_account(cred: Creditential):
     is_len_right(cred)
 
