@@ -52,7 +52,7 @@ async def get_user_session(
     return result.scalar_one_or_none()
 
 
-async def add_uesr(session: AsyncSession, username: str, hash: str) -> str:
+async def add_user(session: AsyncSession, username: str, hash: str) -> str:
     access_token = str(uuid4())
 
     user = User(

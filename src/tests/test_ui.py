@@ -294,14 +294,6 @@ async def test_key_event_loop(mock_handle, mock_get, mock_format, mock_console):
     assert mock_console.print.call_args_list == [call(1), call(2)]
 
 
-class AsyncContextManager:
-    async def __aenter__(self, *args, **kwargs):
-        pass
-
-    async def __aexit__(self, exc_type, exc, tb):
-        pass
-
-
 @pytest.mark.asyncio
 @patch("todo_app.ui.init_db", new_callable=AsyncMock)
 @patch("todo_app.ui.get_session")
@@ -317,16 +309,12 @@ async def test_interface(
     mock_session,
     mock_init,
     mock_console,
+    mock_with_session,
 ):
     engine = AsyncMock()
     mock_init.return_value = engine
 
-    session = MagicMock()
-
-    instance = AsyncContextManager()
-    instance.__aenter__ = AsyncMock(return_value=session)
-
-    mock_session.return_value = instance
+    mock_session.return_value = mock_with_session
 
     mock_console_.return_value = mock_console
 

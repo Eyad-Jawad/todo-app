@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from todo_app.db.models import Todo, User
 from todo_app.db.queries import (
     add_todo,
-    add_uesr,
+    add_user,
     delete_todo,
     delete_user,
     get_todos,
@@ -191,7 +191,7 @@ async def test_get_user_sesison_with_one_entry(mock_session):
 async def test_add_user(mock_uuid, mock_session):
     mock_uuid.return_value = "token"
 
-    assert await add_uesr(mock_session, "Noice", "Anything") == "token"
+    assert await add_user(mock_session, "Noice", "Anything") == "token"
 
     stmt = select(User)
     result = await mock_session.execute(stmt)

@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 
 from todo_app.db import get_session
 from todo_app.db.queries import (
-    add_uesr,
+    add_user,
     delete_user,
     get_user,
     get_user_session,
@@ -26,7 +26,7 @@ async def sign_up(username: str, password: str):
 
         hash = ph.hash(password)
 
-        access_token = await add_uesr(session, username, hash)
+        access_token = await add_user(session, username, hash)
 
         return {"access_token": access_token}
 
