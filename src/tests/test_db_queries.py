@@ -1,25 +1,25 @@
+from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from todo_app.db.models import Todo, User
 from todo_app.db.queries import (
     add_todo,
+    add_uesr,
     delete_todo,
+    delete_user,
     get_todos,
-    toggle_todo,
     get_user,
     get_user_session,
-    add_uesr,
-    set_token,
     revoke_token,
-    delete_user,
+    set_token,
+    toggle_todo,
 )
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from datetime import datetime, UTC
 
 @pytest_asyncio.fixture
 async def mock_session():
@@ -28,7 +28,6 @@ async def mock_session():
     local_session = async_sessionmaker(bind=engine)
     session = local_session()
 
-    from todo_app.db import models as models
     from todo_app.db import Base
 
     async with engine.begin() as conn:
@@ -95,7 +94,7 @@ async def test_delete(mock_session):
 async def test_add_todo(mock_input, mock_time, mock_session):
     mock_input.return_value = "str"
 
-    date = datetime.now()
+    date = datetime.now(tz=UTC)
     mock_time.now.return_value = date
 
     await add_todo(mock_session, 1)
@@ -108,7 +107,7 @@ async def test_add_todo(mock_input, mock_time, mock_session):
 
     assert todo.user_id == 1
     assert todo.todo_text == "str"
-    assert todo.creation_date == date
+    assert todo.creation_date == date.replace(tzinfo=None)
     assert todo.is_done == False
 
     mock_time.now.assert_called_once_with(tz="val")
@@ -145,16 +144,19 @@ async def test_get_user_with_no_entry(mock_session):
 
 @pytest.mark.asyncio
 async def test_get_user_with_one_entry(mock_session):
-    mock_session.add(User(
-        username="Noice",
-        hash="Anything",
-    ))
+    mock_session.add(
+        User(
+            username="Noice",
+            hash="Anything",
+        )
+    )
     await mock_session.commit()
 
     user = await get_user("Noice", mock_session)
 
     assert user.username == "Noice"
     assert user.hash == "Anything"
+
 
 @pytest.mark.asyncio
 async def test_get_user_sesison_with_no_entry(mock_session):
@@ -163,27 +165,26 @@ async def test_get_user_sesison_with_no_entry(mock_session):
 
 @pytest.mark.asyncio
 async def test_get_user_sesison_with_empty_entry(mock_session):
-    mock_session.add(User(
-        username="Noice",
-        hash="Anything",
-    ))
+    mock_session.add(
+        User(
+            username="Noice",
+            hash="Anything",
+        )
+    )
 
     assert await get_user_session("", mock_session) is None
 
 
 @pytest.mark.asyncio
 async def test_get_user_sesison_with_one_entry(mock_session):
-    mock_session.add(User(
-        username="Noice",
-        hash="Anything",
-        access_token="T"
-    ))
+    mock_session.add(User(username="Noice", hash="Anything", access_token="T"))
 
     user = await get_user_session("T", mock_session)
 
     assert user.username == "Noice"
     assert user.hash == "Anything"
     assert user.access_token == "T"
+
 
 @pytest.mark.asyncio
 @patch("todo_app.db.queries.uuid4")
@@ -288,9 +289,9 @@ async def test_delete_user(mock_session):
         user_id=user.id,
         todo_text="meh",
         is_done=False,
-        creation_date=datetime.now(),
+        creation_date=datetime.now(tz=UTC),
     )
-    
+
     mock_session.add(todo)
     await mock_session.commit()
 

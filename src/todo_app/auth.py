@@ -4,12 +4,12 @@ from fastapi import HTTPException, status
 
 from todo_app.db import get_session
 from todo_app.db.queries import (
-    get_user, 
-    get_user_session, 
     add_uesr,
-    set_token,
-    revoke_token,
     delete_user,
+    get_user,
+    get_user_session,
+    revoke_token,
+    set_token,
 )
 
 ph = PasswordHasher()
