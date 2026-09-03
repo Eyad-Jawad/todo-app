@@ -1,9 +1,8 @@
-import redis
 import time
-
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, HTTPException, status
+import redis
+from fastapi import FastAPI, HTTPException, Request, status
 from pydantic import BaseModel
 
 from todo_app.db import init_db
@@ -28,7 +27,7 @@ def rate_limiter(
     async def dependency(request: Request):
         api_key = request.headers.get("access_key")
         identifier = api_key or request.client.host
-        
+
         now = int(time.time())
         window_start = now - (now % window)
 
@@ -40,8 +39,8 @@ def rate_limiter(
 
         elif current > limit:
             raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS, 
-                detail="Rate limit exceeded, please try again later."
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Rate limit exceeded, please try again later.",
             )
 
     return dependency
