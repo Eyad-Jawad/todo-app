@@ -22,9 +22,12 @@ jobs:
       - name: Intall justfile
         run: sudo apt install just
 
+      - name: Install redis
+        run: sudo apt install redis -y
+
       - name: Install uv
         run: pip install uv
-      
+
       - name: Install dependencies
         run: uv sync --locked
       
