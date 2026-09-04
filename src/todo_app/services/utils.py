@@ -1,13 +1,22 @@
 import time
+from typing import Annotated
 
 import redis
 from fastapi import HTTPException, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 
 
 class Creditential(BaseModel):
-    username: str
-    password: str
+    username: Annotated[
+        str,
+        StringConstraints(
+            strip_whitespace=True, max_length=16, min_length=3, ascii_only=True
+        ),
+    ]
+    password: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, max_length=36, min_length=8),
+    ]
 
 
 class Token(BaseModel):
