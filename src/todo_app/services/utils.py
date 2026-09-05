@@ -1,9 +1,9 @@
-import time
 import os
+import time
 from typing import Annotated
-from dotenv import load_dotenv
 
 import redis
+from dotenv import load_dotenv
 from fastapi import HTTPException, Request, status
 from pydantic import BaseModel, StringConstraints
 
@@ -23,6 +23,7 @@ class Creditential(BaseModel):
 
 class Token(BaseModel):
     access_token: str
+
 
 load_dotenv()
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
