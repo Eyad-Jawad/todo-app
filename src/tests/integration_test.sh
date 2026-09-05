@@ -118,7 +118,7 @@ fi
 #####################################################
 # Toggle a todo
 
-toggle_todo_response=$(curl -s -w "\n%{http_code}" -X PATCH http://127.0.0.1:8000/todos/toggle/ \
+toggle_todo_response=$(curl -s -w "\n%{http_code}" -X PATCH http://127.0.0.1:8000/todos/toggle \
     -H "Content-Type: application/json" \
     -d '{"todo_id":1, "access_token":"'"$access_token"'"}' \
 )
@@ -161,7 +161,7 @@ fi
 #####################################################
 # Delete todo
 
-delete_todo_response=$(curl -s -w "\n%{http_code}" -X DELETE http://127.0.0.1:8000/todos/delete/ \
+delete_todo_response=$(curl -s -w "\n%{http_code}" -X DELETE http://127.0.0.1:8000/todos/delete \
     -H "Content-Type: application/json" \
     -d '{"todo_id":1, "access_token":"'"$access_token"'"}' \
 )
