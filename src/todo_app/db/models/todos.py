@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from todo_app.db import Base
@@ -16,7 +16,7 @@ class Todo(Base):
     todo_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     todo_text: Mapped[str] = mapped_column()
-    creation_date: Mapped[datetime] = mapped_column()
+    creation_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     is_done: Mapped[bool] = mapped_column()
 
     user: Mapped["User"] = relationship(

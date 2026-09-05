@@ -98,7 +98,7 @@ async def add_todo(request: CreateTodo):
 
 
 @router.patch(
-    "/todos/toggle/",
+    "/todos/toggle",
     dependencies=[Depends(rate_limiter())],
 )
 async def toggle_todo(request: GeneralTodo):
@@ -111,7 +111,7 @@ async def toggle_todo(request: GeneralTodo):
 
 
 @router.delete(
-    "/todos/delete/",
+    "/todos/delete",
     dependencies=[Depends(rate_limiter())],
 )
 async def delete_todo(request: GeneralTodo):

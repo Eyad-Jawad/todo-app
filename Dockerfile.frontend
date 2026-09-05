@@ -1,0 +1,5 @@
+FROM nginx:alpine
+
+COPY frontend/index.html /usr/share/nginx/html/
+COPY frontend/styles.css /usr/share/nginx/html/
+COPY frontend/script.js /usr/share/nginx/html/

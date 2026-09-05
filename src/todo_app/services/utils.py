@@ -1,5 +1,7 @@
 import time
+import os
 from typing import Annotated
+from dotenv import load_dotenv
 
 import redis
 from fastapi import HTTPException, Request, status
@@ -22,8 +24,10 @@ class Creditential(BaseModel):
 class Token(BaseModel):
     access_token: str
 
+load_dotenv()
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 
-r = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
+r = redis.Redis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
 
 
 def rate_limiter(

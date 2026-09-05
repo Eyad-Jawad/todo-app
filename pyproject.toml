@@ -1,7 +1,7 @@
 [project]
 name = "todo-app"
 version = "0.1.0"
-description = "Add your description here"
+description = "The backend for a todo website"
 readme = "README.md"
 authors = [
     { name = "Eyad Jawad" }
@@ -10,11 +10,14 @@ requires-python = ">=3.11"
 dependencies = [
     "aiosqlite>=0.22.1",
     "argon2-cffi>=25.1.0",
+    "asyncpg>=0.31.0",
     "fastapi[standard]>=0.141.1",
+    "python-dotenv>=1.2.3",
     "readchar>=4.2.2",
     "redis[hiredis]>=8.1.0",
     "rich>=15.0.0",
     "sqlalchemy>=2.0.52",
+    "uvicorn>=0.52.4",
 ]
 
 [project.scripts]
@@ -32,7 +35,6 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
     "ruff>=0.16.5",
-    "uvicorn>=0.52.4",
 ]
 
 [tool.pytest.ini_options]

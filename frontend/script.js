@@ -1,16 +1,14 @@
-const API_BASE = "http://127.0.0.1:8000";
-
 // Keep all API paths in one place so they are easy to change if your FastAPI
 // route names differ slightly.
 const ENDPOINTS = {
-    signup: `${API_BASE}/auth/sign_up`,
-    login: `${API_BASE}/auth/log_in`,
-    logout: `${API_BASE}/auth/log_out`,
-    deleteAccount: `${API_BASE}/auth/delete_account`,
-    todosAll: `${API_BASE}/todos/all`,
-    todoAdd: `${API_BASE}/todos/add`,
-    todoToggle: `${API_BASE}/todos/toggle/`,
-    todoDelete: `${API_BASE}/todos/delete/`,
+    signup: `/auth/sign_up`,
+    login: `/auth/log_in`,
+    logout: `/auth/log_out`,
+    deleteAccount: `/auth/delete_account`,
+    todosAll: `/todos/all`,
+    todoAdd: `/todos/add`,
+    todoToggle: `/todos/toggle`,
+    todoDelete: `/todos/delete`,
 };
 
 const TOKEN_COOKIE = "access_token";

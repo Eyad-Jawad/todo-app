@@ -1,18 +1,10 @@
 #!/bin/bash
 
 cleanup() {
-    kill "$REDIS_PID" 2>/dev/null
-    wait "$REDIS_PID" 2>/dev/null
-
     kill "$FASTAPI_PID" 2>/dev/null
     wait "$FASTAPI_PID" 2>/dev/null
 }
 trap cleanup EXIT INT TERM
-
-redis-server >/dev/null &
-REDIS_PID=$!
-
-sleep 1
 
 uvicorn todo_app.services:app --host 0.0.0.0 --port 8000 &>/dev/null &
 FASTAPI_PID=$!
