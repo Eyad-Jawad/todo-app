@@ -50,9 +50,6 @@ jobs:
 
       - name: Run tests
         env:
-          POSTGRES_HOST: localhost
-          POSTGRES_DB: todo
-          POSTGRES_USER: todo
-          POSTGRES_PASSWORD: test_password
-          REDIS_HOST: localhost
+          POSTGRES_URL: postgresql+asyncpg://todo:test_password@localhost:5432/todo
+          REDIS_URL: redis://localhost:6379
         run: just all

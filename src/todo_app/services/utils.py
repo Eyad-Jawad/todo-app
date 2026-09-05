@@ -26,9 +26,9 @@ class Token(BaseModel):
 
 
 load_dotenv()
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_URL = os.environ["REDIS_URL"]
 
-r = redis.Redis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
+r = redis.Redis.from_url(REDIS_URL)
 
 
 def rate_limiter(

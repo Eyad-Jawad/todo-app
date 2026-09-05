@@ -5,8 +5,8 @@ all:
     uv run mypy .
     echo "Everything looks good!"
 
-test:
-    uv run pytest
+test: # for local testing
+    uv run pytest -k "not test_integration"
 
 lint:
     uv run black .

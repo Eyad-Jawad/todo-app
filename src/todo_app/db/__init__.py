@@ -12,15 +12,9 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase
 
 load_dotenv()
-DB_NAME = os.getenv("POSTGRES_DB")
-DB_USER = os.getenv("POSTGRES_USER")
-DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
-DB_PORT = 5432
+DB_URL = os.environ["POSTGRES_URL"]
 
-engine = create_async_engine(
-    f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-)
+engine = create_async_engine(DB_URL)
 
 
 class Base(DeclarativeBase):
