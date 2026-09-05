@@ -14,9 +14,12 @@ from sqlalchemy.orm import DeclarativeBase
 load_dotenv()
 DB_URL = os.environ["POSTGRES_URL"]
 
-engine = create_async_engine(
-    DB_URL, connect_args={"ssl": True}
-)
+connect_args = {}
+
+if os.environ.get("POSTGRES_SSL") == "true":
+    connect_args["ssl"] = True
+
+engine = create_async_engine(DB_URL, connect_args=connect_args)
 
 
 class Base(DeclarativeBase):
