@@ -3,8 +3,6 @@
 A Todo App where you can put all of your todos!  
 [Live Demo!](https://eyad-jawad.github.io/todo-app/)
 
-![An image of the website's interface](media/example.png)
-
 ### Performance
 This app relies on free services to run, and 4 of them at that, that't why it can be a "little" slow sometimes.
 
@@ -63,6 +61,19 @@ You don't have to worry about anything else, but I suggest you run `just test` a
 
 ### Tests
 Test coverage percent is not informative enough at this point, but it's `94%`, with one integration test if you set up the enviroment, `GitHub Actions` take care of that in the deployment of the app.
+
+## Interface
+These are images of the interface:    
+
+On desktop:  
+
+![An image of the website's interface from a desktop](media/desktopExample.png)
+
+---
+
+On mobile:  
+
+![An image of the website's interface from a mobile](media/mobileExample.png)
 
 ### Afterword
 I have built once before, but abandoned it because it required too much frontend, but it did help me build this one, which took about `30h`? I don't know, but it was fun to make!  
