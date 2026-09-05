@@ -1,14 +1,14 @@
-// Keep all API paths in one place so they are easy to change if your FastAPI
-// route names differ slightly.
+const API_BASE = "https://todo-app-beebab84.fastapicloud.dev/";
+
 const ENDPOINTS = {
-    signup: `/auth/sign_up`,
-    login: `/auth/log_in`,
-    logout: `/auth/log_out`,
-    deleteAccount: `/auth/delete_account`,
-    todosAll: `/todos/all`,
-    todoAdd: `/todos/add`,
-    todoToggle: `/todos/toggle`,
-    todoDelete: `/todos/delete`,
+    signup: `${API_BASE}/auth/sign_up`,
+    login: `${API_BASE}/auth/log_in`,
+    logout: `${API_BASE}/auth/log_out`,
+    deleteAccount: `${API_BASE}/auth/delete_account`,
+    todosAll: `${API_BASE}/todos/all`,
+    todoAdd: `${API_BASE}/todos/add`,
+    todoToggle: `${API_BASE}/todos/toggle`,
+    todoDelete: `${API_BASE}/todos/delete`,
 };
 
 const TOKEN_COOKIE = "access_token";

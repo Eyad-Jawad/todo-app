@@ -1,0 +1,38 @@
+name: Deploy The Static Website For The Todo App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout The Repository
+        uses: actions/checkout@v7
+            
+      - name: Upload files
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/
+
+  deploy:
+    needs: build-and-upload
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+
+    runs-on: ubuntu-latest
+  
+    steps:      
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v5
