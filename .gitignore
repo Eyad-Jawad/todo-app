@@ -25,3 +25,6 @@ todo_app.db
 .ruff_cache/
 .coverage
 dump.rdb
+
+.vs/
+.vscode/
