@@ -1,12 +1,15 @@
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from todo_app.db.models import Todo, User
+from todo_app.db.models import RefreshToken, Todo, User
+
+
+class InvalidToken(ValueError):
+    pass
 
 
 async def get_todos(session: AsyncSession, user_id: int) -> Sequence[Todo]:
@@ -23,7 +26,7 @@ async def get_todo(
     return result.scalar_one_or_none()
 
 
-async def add_todo(session: AsyncSession, user_id: int, text: str) -> None:
+async def add_todo(session: AsyncSession, user_id: int, text: str) -> Todo:
     todo = Todo(
         user_id=user_id,
         todo_text=text,
@@ -33,6 +36,8 @@ async def add_todo(session: AsyncSession, user_id: int, text: str) -> None:
 
     session.add(todo)
     await session.commit()
+
+    return todo
 
 
 async def delete_todo(session: AsyncSession, todo: Todo) -> None:
@@ -45,56 +50,61 @@ async def toggle_todo(session: AsyncSession, todo: Todo) -> None:
     await session.commit()
 
 
-async def get_user(session: AsyncSession, username: str) -> User | None:
+async def get_user(session: AsyncSession, user_id: int) -> User | None:
     stmt = (
-        select(User)
-        .options(selectinload(User.todos))
-        .where(User.username == username)
+        select(User).options(selectinload(User.todos)).where(User.id == user_id)
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
 
-async def get_user_session(
-    session: AsyncSession, access_token: str
-) -> User | None:
-    stmt = (
-        select(User)
-        .options(selectinload(User.todos))
-        .where(User.access_token == access_token)
-    )
-    result = await session.execute(stmt)
-    return result.scalar_one_or_none()
-
-
-async def add_user(session: AsyncSession, username: str, hash: str) -> str:
-    access_token = str(uuid4())
-
+async def add_user(session: AsyncSession, username: str, hash: str) -> None:
     user = User(
         username=username,
         hash=hash,
-        access_token=access_token,
     )
 
     session.add(user)
-    await session.commit()
-
-    return access_token
-
-
-async def set_token(session: AsyncSession, user: User) -> str:
-    access_token = str(uuid4())
-    user.access_token = access_token
-    await session.commit()
-
-    return access_token
-
-
-async def revoke_token(session: AsyncSession, user: User) -> None:
-    user.access_token = None
     await session.commit()
 
 
 async def delete_user(session: AsyncSession, user: User) -> None:
     await session.delete(user)
     await session.commit()
+
+
+async def add_refresh_token(
+    session: AsyncSession, user_id: int, token: str
+) -> None:
+    await session.add(
+        RefreshToken(
+            token=token,
+            user_id=user_id,
+        )
+    )
+    await session.commit()
+
+
+async def get_refresh_token(
+    session: AsyncSession, token: str
+) -> RefreshToken | None:
+    result = await session.execute(
+        select(RefreshToken).where(RefreshToken.token == token)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_user_by_token(session: AsyncSession, token: str) -> User | None:
+    refresh_token = await get_refresh_token(session, token)
+
+    if refresh_token and refresh_token.is_valid:
+        return refresh_token.user
+
+    return None
+
+
+async def revoke_token(session: AsyncSession, token: str) -> None:
+    refresh_token = await get_refresh_token(session, token)
+
+    if refresh_token is None or not refresh_token.is_valid:
+        raise InvalidToken("Token doesn't exist or already revoked")

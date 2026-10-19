@@ -1,42 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from todo_app.db import get_session, queries
 from todo_app.db.models import Todo, User
-from todo_app.services.utils import rate_limiter
-
-
-class CreateTodo(BaseModel):
-    text: str
-    access_token: str
-
-
-class GeneralTodo(BaseModel):
-    todo_id: int
-    access_token: str
-
+from todo_app.services.auth import get_user_dependncy
+from todo_app.services.utils import TodoRequest, TodoResponse, rate_limiter
 
 router = APIRouter()
 
 
-async def _get_user(session: AsyncSession, access_token: str) -> User:
-    user = await queries.get_user_session(session, access_token)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_406_NOT_ACCEPTABLE,
-            detail="Access token is expired, please log in again to get a new one.",
-        )
-
-    return user
-
-
 async def _get_todo(
-    session: AsyncSession, todo_id: int, access_token: str
+    session: AsyncSession,
+    todo_id: int,
+    user_id: int,
 ) -> Todo:
-    user = await _get_user(session, access_token)
-
-    todo = await queries.get_todo(session, user.id, todo_id)
+    todo = await queries.get_todo(session, user_id, todo_id)
 
     if todo is None:
         raise HTTPException(
@@ -48,92 +28,87 @@ async def _get_todo(
 
 
 @router.get(
-    "/todos/all",
+    "/api/todos/all",
     dependencies=[Depends(rate_limiter())],
+    response_model=list[TodoResponse],
+    status_code=status.HTTP_200_OK,
 )
-async def get_todos(access_token: str = Query(...)):
-    async with get_session() as session:
-        user = await _get_user(session, access_token)
+async def get_todos(
+    user: Annotated[User, Depends(get_user_dependncy)],
+):
+    if user.todos == []:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="You don't have any todos.",
+        )
 
-        if user.todos == []:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="You don't have any todos.",
-            )
-
-        return [
-            {
-                "id": todo.todo_id,
-                "todo": todo.todo_text,
-                "is_done": todo.is_done,
-                "creation_date": todo.creation_date,
-            }
-            for todo in user.todos
-        ]
+    return user.todos
 
 
 @router.post(
-    "/todos/add",
+    "/api/todos/add",
     dependencies=[Depends(rate_limiter())],
+    response_model=TodoResponse,
+    status_code=status.HTTP_201_CREATED,
 )
-async def add_todo(request: CreateTodo):
-    async with get_session() as session:
-        user = await _get_user(session, request.access_token)
+async def add_todo(
+    user: Annotated[User, Depends(get_user_dependncy)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    request: TodoRequest,
+):
+    if len(user.todos) >= 100:
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE,
+            detail="You can't have more than 100 todos.",
+        )
 
-        if len(request.text) > 4096:
-            raise HTTPException(
-                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-                detail="A todo text can't be longer than 4096 byte.",
-            )
-
-        if len(user.todos) >= 100:
-            raise HTTPException(
-                status_code=status.HTTP_406_NOT_ACCEPTABLE,
-                detail="You can't have more than 100 todos.",
-            )
-
-        await queries.add_todo(session, user.id, request.text)
-
-        return status.HTTP_201_CREATED
+    return await queries.add_todo(session, user.id, request.text)
 
 
 @router.patch(
-    "/todos/toggle",
+    "/api/todos/toggle/{id}",
     dependencies=[Depends(rate_limiter())],
+    response_model=TodoResponse,
+    status_code=status.HTTP_200_OK,
 )
-async def toggle_todo(request: GeneralTodo):
-    async with get_session() as session:
-        todo = await _get_todo(session, request.todo_id, request.access_token)
+async def toggle_todo(
+    user: Annotated[User, Depends(get_user_dependncy)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    id: int,
+):
+    todo = await _get_todo(session, id, user.id)
 
-        await queries.toggle_todo(session, todo)
+    await queries.toggle_todo(session, todo)
 
-        return status.HTTP_202_ACCEPTED
+    return todo
 
 
 @router.delete(
-    "/todos/delete",
+    "/api/todos/delete{id}",
     dependencies=[Depends(rate_limiter())],
+    status_code=status.HTTP_204_NO_CONTENT,
 )
-async def delete_todo(request: GeneralTodo):
-    async with get_session() as session:
-        todo = await _get_todo(session, request.todo_id, request.access_token)
+async def delete_todo(
+    user: Annotated[User, Depends(get_user_dependncy)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    id: int,
+):
+    todo = await _get_todo(session, id, user.id)
 
-        await queries.delete_todo(session, todo)
-
-        return status.HTTP_202_ACCEPTED
+    await queries.delete_todo(session, todo)
 
 
 @router.get(
-    "/todos/",
+    "/api/todos/{id}",
     dependencies=[Depends(rate_limiter())],
+    response_model=TodoResponse,
+    status_code=status.HTTP_200_OK,
 )
-async def get_todo(request: GeneralTodo):
-    async with get_session() as session:
-        todo = await _get_todo(session, request.todo_id, request.access_token)
+async def get_todo(
+    user: Annotated[User, Depends(get_user_dependncy)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    id: int,
+):
+    todo = await _get_todo(session, id, user.id)
 
-        return {
-            "id": todo.todo_id,
-            "todo": todo.todo_text,
-            "is_done": todo.is_done,
-            "creation_date": todo.creation_date,
-        }
+    return todo
