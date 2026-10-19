@@ -6,6 +6,7 @@ from todo_app.db import Base
 
 if TYPE_CHECKING:
     from todo_app.db.models import Todo
+    from todo_app.db.models import RefreshToken
 
 
 class User(Base):
@@ -17,6 +18,11 @@ class User(Base):
     access_token: Mapped[str | None] = mapped_column()
 
     todos: Mapped[list["Todo"]] = relationship(
+        back_populates="user",
+        cascade="all, delete",
+    )
+
+    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         back_populates="user",
         cascade="all, delete",
     )

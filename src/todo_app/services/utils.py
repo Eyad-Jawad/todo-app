@@ -1,12 +1,15 @@
 import os
 import time
 from typing import Annotated
+from datetime import datetime, timedelta, UTC
 
+import jwt
 import redis
 from dotenv import load_dotenv
 from fastapi import HTTPException, Request, status
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, StringConstraints, ConfigDict, Field
 
+from todo_app.settings import settings
 
 class Creditential(BaseModel):
     username: Annotated[
@@ -21,8 +24,36 @@ class Creditential(BaseModel):
     ]
 
 
-class Token(BaseModel):
-    access_token: str
+class TodoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    todo_id: int
+    todo_text: str
+    creation_date: datetime
+    is_done = Field(default=True)
+
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+    todos: list[TodoResponse]
+
+
+class JsonWebTokenBase(BaseModel):
+    token: str
+    expiration_date: datetime
+
+
+class RefreshTokenResponse(JsonWebTokenBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: int
+
+
+class AccessTokenResponse(JsonWebTokenBase):
+    pass
 
 
 load_dotenv()
@@ -62,3 +93,23 @@ def rate_limiter(
             )
 
     return dependency
+
+
+def create_json_web_token(data: dict, is_access_token: bool, time_delta: timedelta | None = None) -> str:
+    to_encode = data.copy()
+
+    if time_delta:
+        expiration_date = datetime.now(UTC) + time_delta
+    elif is_access_token:
+        expiration_date = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_time_in_minutes)
+    else:
+        expiration_date = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_time_in_days)
+
+    to_encode.update({"exp": expiration_date})
+
+    return jwt.encode(
+        to_encode,
+        settings.secret_key.get_secret_value(),
+        algorithm=settings.algorithm,
+    )
+
