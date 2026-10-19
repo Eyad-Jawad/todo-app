@@ -11,7 +11,6 @@ from todo_app.services.utils import r
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     engine = await init_db()
-    
 
     yield
 

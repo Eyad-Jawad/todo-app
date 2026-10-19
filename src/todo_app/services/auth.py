@@ -1,23 +1,31 @@
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
-from datetime import datetime, UTC, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from todo_app.db import get_session
-from todo_app.settings import settings
+from todo_app.db.models import User
 from todo_app.db.queries import (
+    add_refresh_token,
     add_user,
     delete_user,
     get_user,
-    add_refresh_token,
     get_user_by_token,
     revoke_token,
 )
-from todo_app.services.utils import Creditential, rate_limiter, create_json_web_token, RefreshTokenResponse, AccessTokenResponse
+from todo_app.services.utils import (
+    AccessTokenResponse,
+    Creditential,
+    RefreshTokenResponse,
+    create_json_web_token,
+    rate_limiter,
+)
+from todo_app.settings import settings
 
 REQUESTS_LIMIT = 10
 REQUESTS_LIMIT_TIME = 60 * 5
@@ -25,8 +33,43 @@ router = APIRouter()
 
 ph = PasswordHasher()
 
-oath2_scheme = OAuth2PasswordBearer(token_url="/api/token")
-_refresh_token_oath2_scheme = OAuth2PasswordBearer(token_url="/api/log_in")
+oaith2_scheme = OAuth2PasswordBearer(token_url="/api/token")
+_refresh_token_oauth2_scheme = OAuth2PasswordBearer(token_url="/api/log_in")
+
+
+async def get_user_dependncy(
+    token: Annotated[str, Depends(_refresh_token_oauth2_scheme)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> User:
+    decoded = jwt.decode(token)
+    if decoded.get("exp") < datetime.now(UTC):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Expired token."
+        )
+
+    if not decoded.get("ref"):
+        user = await get_user(session, decoded["sub"])
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Invalid token, account was deleted.",
+            )
+        # Either that, or our production got compromised
+        # and the secret key was leaked.
+
+        return user
+
+    user = await get_user_by_token(session, token)
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or expired token.",
+        )
+
+    return user
+
 
 @router.post(
     "/auth/sign_up",
@@ -66,7 +109,9 @@ async def log_in(
             detail="Invalid username or password.",
         )
 
-    refresh_token = create_json_web_token(data={"sub": user.id, "ref": True}, is_access_token=False)
+    refresh_token = create_json_web_token(
+        data={"sub": user.id, "ref": True}, is_access_token=False
+    )
     await add_refresh_token(session, user.id, refresh_token)
 
     return refresh_token
@@ -78,16 +123,9 @@ async def log_in(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def log_out(
-    token: Annotated[str, Depends(_refresh_token_oath2_scheme)],
+    user: Annotated[User, Depends(get_user_dependncy)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
-    user = await get_user_by_token(session, token)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Refresh token doesn't exist.",
-        )
-
     await revoke_token(session, user)
 
 
@@ -116,20 +154,13 @@ async def delete_account(
     status_code=status.HTTP_200_OK,
     response_model=AccessTokenResponse,
 )
-async def get_access_token(
-    token: Annotated[str, Depends(_refresh_token_oath2_scheme)],
-    session: Annotated[AsyncSession, Depends(get_session)],
-):
-    user = await get_user_by_token(session, token)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Refresh token doesn't exist.",
-        )
-
+async def get_access_token(user: Annotated[User, Depends(get_user_dependncy)]):
     return {
-        "token": create_json_web_token(data={"sub": user.id, "ref": False}, is_access_token=True),
-        "expiration_date": datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_time_in_minutes)
+        "token": create_json_web_token(
+            data={"sub": user.id, "ref": False}, is_access_token=True
+        ),
+        "expiration_date": datetime.now(UTC)
+        + timedelta(minutes=settings.access_token_expire_time_in_minutes),
     }
 
 

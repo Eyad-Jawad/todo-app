@@ -1,10 +1,11 @@
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
-from datetime import datetime, UTC, timedelta
+
+from sqlalchemy import DateTime, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from todo_app.db import Base
 from todo_app.settings import settings
-from sqlalchemy import ForeignKey,DateTime
-from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 if TYPE_CHECKING:
     from todo_app.db.models import User
@@ -18,7 +19,10 @@ class RefreshToken(Base):
 
     expiration_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_time_in_days),
+        default=lambda: (
+            datetime.now(UTC)
+            + timedelta(days=settings.refresh_token_expire_time_in_days)
+        ),
     )
     is_valid: Mapped[bool] = mapped_column(default=True)
 

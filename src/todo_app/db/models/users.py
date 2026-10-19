@@ -5,8 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from todo_app.db import Base
 
 if TYPE_CHECKING:
-    from todo_app.db.models import Todo
-    from todo_app.db.models import RefreshToken
+    from todo_app.db.models import RefreshToken, Todo
 
 
 class User(Base):

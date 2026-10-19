@@ -1,15 +1,16 @@
 import os
 import time
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
-from datetime import datetime, timedelta, UTC
 
 import jwt
 import redis
 from dotenv import load_dotenv
 from fastapi import HTTPException, Request, status
-from pydantic import BaseModel, StringConstraints, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from todo_app.settings import settings
+
 
 class Creditential(BaseModel):
     username: Annotated[
@@ -56,6 +57,19 @@ class AccessTokenResponse(JsonWebTokenBase):
     pass
 
 
+class TodoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    todo_id: int
+    todo_text: str
+    creation_date: datetime
+    is_done: bool
+
+
+class TodoRequest(BaseModel):
+    text: str = Field(max_length=4096)
+
+
 load_dotenv()
 REDIS_URL = os.environ["REDIS_URL"]
 
@@ -95,15 +109,21 @@ def rate_limiter(
     return dependency
 
 
-def create_json_web_token(data: dict, is_access_token: bool, time_delta: timedelta | None = None) -> str:
+def create_json_web_token(
+    data: dict, is_access_token: bool, time_delta: timedelta | None = None
+) -> str:
     to_encode = data.copy()
 
     if time_delta:
         expiration_date = datetime.now(UTC) + time_delta
     elif is_access_token:
-        expiration_date = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_time_in_minutes)
+        expiration_date = datetime.now(UTC) + timedelta(
+            minutes=settings.access_token_expire_time_in_minutes
+        )
     else:
-        expiration_date = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_time_in_days)
+        expiration_date = datetime.now(UTC) + timedelta(
+            days=settings.refresh_token_expire_time_in_days
+        )
 
     to_encode.update({"exp": expiration_date})
 
@@ -112,4 +132,3 @@ def create_json_web_token(data: dict, is_access_token: bool, time_delta: timedel
         settings.secret_key.get_secret_value(),
         algorithm=settings.algorithm,
     )
-
