@@ -2,10 +2,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
-from todo_app.auth import (
+from todo_app.services.auth import (
     delete_account,
     log_out,
-    login,
+    log_in,
     ph,
     sign_up,
     verify_password,
@@ -71,7 +71,7 @@ async def test_login_with_new_user(
     mock_session.return_value = mock_with_session
 
     with pytest.raises(HTTPException):
-        await login("user", "123")
+        await log_in("user", "123")
 
     mock_set.assert_not_awaited()
 
@@ -92,7 +92,7 @@ async def test_login_with_incorrect_password(
     mock_get.return_value = user
 
     with pytest.raises(HTTPException):
-        await login("user", "123")
+        await log_in("user", "123")
 
     mock_verify.assert_called_once_with("123", "Hash")
 
@@ -115,7 +115,7 @@ async def test_login_with_valid_attempt(
     user.hash = "Hash"
     mock_get.return_value = user
 
-    assert await login("user", "123") == {"access_token": "Token"}
+    assert await log_in("user", "123") == {"access_token": "Token"}
 
     mock_verify.assert_called_once_with("123", "Hash")
 

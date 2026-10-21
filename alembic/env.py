@@ -1,6 +1,4 @@
 import asyncio
-import os
-from dotenv import load_dotenv
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -10,15 +8,13 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from todo_app.db import models as models
 from todo_app.db import Base
 from alembic import context
+from todo_app.settings import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-load_dotenv()
-DB_URL = os.environ["POSTGRES_URL"]
-
-config.set_main_option("sqlalchemy.url", DB_URL)
+config.set_main_option("sqlalchemy.url", settings.db_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

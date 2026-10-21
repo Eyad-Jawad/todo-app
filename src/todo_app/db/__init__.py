@@ -1,8 +1,6 @@
-import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -10,15 +8,15 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase
 
-load_dotenv()
-DB_URL = os.environ["POSTGRES_URL"]
+
+from todo_app.settings import settings
 
 connect_args = {}
 
-if os.environ.get("POSTGRES_SSL") == "true":
+if settings.postgres_ssl == "true":
     connect_args["ssl"] = True
 
-engine = create_async_engine(DB_URL, connect_args=connect_args)
+engine = create_async_engine(settings.db_url, connect_args=connect_args)
 
 
 class Base(DeclarativeBase):

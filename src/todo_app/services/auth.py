@@ -7,6 +7,7 @@ from argon2.exceptions import VerifyMismatchError
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from todo_app.db import get_session
 from todo_app.db.models import User
@@ -52,7 +53,7 @@ async def get_user_dependncy(
 
         if user is None:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token, account was deleted.",
             )
         # Either that, or our production got compromised
@@ -87,7 +88,7 @@ async def sign_up(
             detail=f"username {cred.username} is alerady used.",
         )
 
-    hash = ph.hash(cred.password)
+    hash = await run_in_threadpool(ph.hash, cred.password)
 
     await add_user(session, cred.username, hash)
 
