@@ -5,13 +5,8 @@
 # FIXME: The pydantic settings defaults for db stuff to support local stuff
 # FIXME: Tests
 
-import asyncio
-
-from todo_app.ui import interface
-
-
 def main() -> None:
-    asyncio.run(interface())
+    print("Hello, world!")
 
 
 if __name__ == "__main__":
