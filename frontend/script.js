@@ -1,4 +1,4 @@
-const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE = "https://todo-app-beebab84.fastapicloud.dev";
 
 const ENDPOINTS = {
     signup: `${API_BASE}/auth/sign_up`,
