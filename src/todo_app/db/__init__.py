@@ -55,6 +55,7 @@ async def context_session() -> AsyncGenerator[AsyncSession]:
 
 @event.listens_for(engine.sync_engine, "connect")
 def enable_foreign_key_enforcement(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+    if settings.testing == "true":
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
