@@ -22,6 +22,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://eyad-jawad.github.io",
+        "http://127.0.0.1:5500",
+        "http://localhost:6380",
     ],
     allow_credentials=True,
     allow_methods=["*"],

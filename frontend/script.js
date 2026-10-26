@@ -1,4 +1,4 @@
-const API_BASE = "https://todo-app-beebab84.fastapicloud.dev";
+const API_BASE = "http://127.0.0.1:8000/api";
 
 const ENDPOINTS = {
     signup: `${API_BASE}/auth/sign_up`,
@@ -7,12 +7,15 @@ const ENDPOINTS = {
     deleteAccount: `${API_BASE}/auth/delete_account`,
     todosAll: `${API_BASE}/todos/all`,
     todoAdd: `${API_BASE}/todos/add`,
-    todoToggle: `${API_BASE}/todos/toggle`,
-    todoDelete: `${API_BASE}/todos/delete`,
+    todoToggle: (id) => `${API_BASE}/todos/toggle/${id}`,
+    // NOTE: the OpenAPI spec lists this path as "/todos/delete{id}" (no slash
+    // before the id). That looks like a typo in the backend route. If delete
+    // returns 404/405, add the slash here AND fix the route in FastAPI.
+    todoDelete: (id) => `${API_BASE}/todos/delete${id}`,
 };
 
 const TOKEN_COOKIE = "access_token";
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
+const DEFAULT_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
 let authMode = "login";
 
@@ -38,10 +41,20 @@ function getCookie(name) {
     return match ? decodeURIComponent(match.slice(prefix.length)) : null;
 }
 
-function setToken(token) {
+function setToken(token, expirationDate) {
+    let maxAge = DEFAULT_COOKIE_MAX_AGE;
+
+    // Match the cookie lifetime to the token's real expiration if the server sent one.
+    if (expirationDate) {
+        const seconds = Math.floor((new Date(expirationDate).getTime() - Date.now()) / 1000);
+        if (Number.isFinite(seconds) && seconds > 0) {
+            maxAge = seconds;
+        }
+    }
+
     document.cookie = [
         `${encodeURIComponent(TOKEN_COOKIE)}=${encodeURIComponent(token)}`,
-        `Max-Age=${COOKIE_MAX_AGE}`,
+        `Max-Age=${maxAge}`,
         "Path=/",
         "SameSite=Lax",
     ].join("; ");
@@ -56,16 +69,40 @@ function setStatus(element, message, type = "") {
     element.className = `status ${type}`.trim();
 }
 
+// FastAPI returns `detail` as a string for HTTPException, but as an array of
+// objects ({loc, msg, type}) for 422 validation errors.
+function extractDetail(data) {
+    if (typeof data !== "object" || data === null) {
+        return data;
+    }
+
+    const detail = data.detail ?? data.message;
+
+    if (Array.isArray(detail)) {
+        return detail
+            .map((item) => {
+                const field = Array.isArray(item.loc) ? item.loc[item.loc.length - 1] : null;
+                return field ? `${field}: ${item.msg}` : item.msg;
+            })
+            .join("\n");
+    }
+
+    return detail;
+}
+
 async function parseResponse(response) {
+    // 204 No Content (logout, delete, delete account) has no body.
+    if (response.status === 204) {
+        return null;
+    }
+
     const contentType = response.headers.get("content-type") || "";
     const data = contentType.includes("application/json")
         ? await response.json()
         : await response.text();
 
     if (!response.ok) {
-        const detail = typeof data === "object" && data !== null
-            ? data.detail ?? data.message
-            : data;
+        const detail = extractDetail(data);
         const error = new Error(detail || `Request failed with HTTP ${response.status}`);
         error.status = response.status;
         error.emptyTodos = response.status === 404 && detail === "You don't have any todos.";
@@ -76,54 +113,32 @@ async function parseResponse(response) {
 }
 
 /*
- * The backend contract here sends access_token in the request body.
+ * The backend uses OAuth2PasswordBearer, so protected routes expect:
+ *   Authorization: Bearer <token>
  * This helper is the only place that knows about that detail.
- *
- * If your FastAPI endpoints instead expect a query parameter or an
- * Authorization header, change this helper rather than every API call.
  */
-async function apiRequest(url, { method = "GET", body = {}, protectedRoute = false } = {}) {
-    const payload = { ...body };
-    const options = {
-        method,
-        headers: {
-            "Content-Type": "application/json",
-        },
-    };
+async function apiRequest(url, { method = "GET", body, protectedRoute = false } = {}) {
+    const headers = {};
+    const options = { method, headers };
+
+    if (body !== undefined) {
+        headers["Content-Type"] = "application/json";
+        options.body = JSON.stringify(body);
+    }
 
     if (protectedRoute) {
         const token = getCookie(TOKEN_COOKIE);
         if (!token) {
             throw new Error("You are not signed in.");
         }
-        payload.access_token = token;
+        headers["Authorization"] = `Bearer ${token}`;
     }
 
-    if (method === "GET") {
-        // Browsers do not allow fetch() to send a body with GET.
-        // The backend therefore needs to accept access_token as a query parameter
-        // for GET endpoints such as /todos/all.
-        const query = new URLSearchParams();
-        for (const [key, value] of Object.entries(payload)) {
-            query.set(key, String(value));
-        }
-
-        const separator = url.includes("?") ? "&" : "?";
-        const requestUrl = query.toString() ? `${url}${separator}${query}` : url;
-        const response = await fetch(requestUrl, options);
-
-        if (response.status === 401 || response.status === 403 || response.status === 406) {
-            clearToken();
-            showSignedOut();
-        }
-
-        return parseResponse(response);
-    }
-
-    options.body = JSON.stringify(payload);
     const response = await fetch(url, options);
 
-    if (response.status === 401 || response.status === 403 || response.status === 406) {
+    // Only treat auth failures as "session expired" on routes that use the token.
+    // (Otherwise a wrong password on login / delete account would kick you out.)
+    if (protectedRoute && (response.status === 401 || response.status === 403)) {
         clearToken();
         showSignedOut();
     }
@@ -161,24 +176,22 @@ function makeTodoElement(todo) {
     const item = document.createElement("article");
     item.className = "todo-item";
     item.classList.toggle("done", Boolean(todo.is_done));
-    item.dataset.id = String(todo.id);
+    item.dataset.id = String(todo.todo_id);
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.className = "todo-check";
     checkbox.checked = Boolean(todo.is_done);
-    checkbox.setAttribute("aria-label", `Mark "${todo.todo}" as ${todo.is_done ? "not done" : "done"}`);
+    checkbox.setAttribute("aria-label", `Mark "${todo.todo_text}" as ${todo.is_done ? "not done" : "done"}`);
     checkbox.addEventListener("change", async () => {
         checkbox.disabled = true;
         try {
-            const updated = await apiRequest(ENDPOINTS.todoToggle, {
+            const updated = await apiRequest(ENDPOINTS.todoToggle(todo.todo_id), {
                 method: "PATCH",
-                body: { todo_id: todo.id },
                 protectedRoute: true,
             });
 
-            // If the endpoint returns the updated todo, use it. Otherwise the
-            // UI can safely flip the current state locally.
+            // The endpoint returns the updated TodoResponse.
             const newDone = typeof updated?.is_done === "boolean"
                 ? updated.is_done
                 : !todo.is_done;
@@ -198,7 +211,7 @@ function makeTodoElement(todo) {
 
     const text = document.createElement("p");
     text.className = "todo-text";
-    text.textContent = todo.todo;
+    text.textContent = todo.todo_text;
 
     content.append(text);
 
@@ -219,9 +232,8 @@ function makeTodoElement(todo) {
     deleteButton.addEventListener("click", async () => {
         deleteButton.disabled = true;
         try {
-            await apiRequest(ENDPOINTS.todoDelete, {
+            await apiRequest(ENDPOINTS.todoDelete(todo.todo_id), {
                 method: "DELETE",
-                body: { todo_id: todo.id },
                 protectedRoute: true,
             });
             item.remove();
@@ -272,8 +284,8 @@ async function loadTodos() {
         renderTodos(data);
         setStatus(todoStatus, "");
     } catch (error) {
-        // The backend uses 404 to mean the authenticated user has no todos.
-        if (error.status === 404 && error.emptyTodos) {
+        // Kept for safety: older backend versions returned 404 for "no todos".
+        if (error.emptyTodos) {
             renderTodos([]);
             setStatus(todoStatus, "");
         } else {
@@ -282,6 +294,19 @@ async function loadTodos() {
     } finally {
         refreshButton.disabled = false;
     }
+}
+
+async function logIn(username, password) {
+    const data = await apiRequest(ENDPOINTS.login, {
+        method: "POST",
+        body: { username, password },
+    });
+
+    if (!data?.token) {
+        throw new Error("The server did not return an access token.");
+    }
+
+    setToken(data.token, data.expiration_date);
 }
 
 authForm.addEventListener("submit", async (event) => {
@@ -295,20 +320,17 @@ authForm.addEventListener("submit", async (event) => {
     setStatus(authStatus, authMode === "signup" ? "Creating account..." : "Signing in...");
 
     try {
-        const data = await apiRequest(authMode === "signup" ? ENDPOINTS.signup : ENDPOINTS.login, {
-            method: "POST",
-            body: { username, password },
-        });
-
-        const token = typeof data === "string"
-            ? data
-            : data.access_token ?? data.token;
-
-        if (!token) {
-            throw new Error("The server did not return an access token.");
+        if (authMode === "signup") {
+            // Sign up has no documented response body (no token), so create the
+            // account and then log in with the same credentials.
+            await apiRequest(ENDPOINTS.signup, {
+                method: "POST",
+                body: { username, password },
+            });
         }
 
-        setToken(token);
+        await logIn(username, password);
+
         showSignedIn(username);
         authForm.reset();
         await loadTodos();
@@ -326,7 +348,6 @@ logoutButton.addEventListener("click", async () => {
     logoutButton.disabled = true;
 
     try {
-        // Logout explicitly receives the current token.
         await apiRequest(ENDPOINTS.logout, {
             method: "POST",
             protectedRoute: true,
@@ -394,8 +415,7 @@ deleteAccountButton.addEventListener("click", async () => {
     setStatus(todoStatus, "Deleting account...");
 
     try {
-        // The account-delete endpoint was described as username + password,
-        // so this request intentionally does not add access_token.
+        // Takes username + password in the body; no bearer token per the spec.
         await apiRequest(ENDPOINTS.deleteAccount, {
             method: "DELETE",
             body: { username, password },
@@ -412,8 +432,8 @@ deleteAccountButton.addEventListener("click", async () => {
     }
 });
 
-// Existing cookie = existing session. The username is not part of the auth
-// contract you provided, so the UI simply labels the user as signed in.
+// Existing cookie = existing session. The username is not stored client-side,
+// so the UI simply labels the user as signed in.
 if (getCookie(TOKEN_COOKIE)) {
     showSignedIn();
     loadTodos();
