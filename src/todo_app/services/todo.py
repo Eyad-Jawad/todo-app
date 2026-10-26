@@ -9,7 +9,7 @@ from todo_app.services.auth import get_user_dependncy
 from todo_app.services.utils import TodoRequest, TodoResponse, rate_limiter
 
 router = APIRouter()
-todo_rate_limiter = rate_limiter() # In case we want to change some stuff
+todo_rate_limiter = rate_limiter()  # In case we want to change some stuff
 
 
 async def _get_todo(

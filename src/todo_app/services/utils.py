@@ -55,17 +55,9 @@ class AccessTokenResponse(JsonWebTokenBase):
     pass
 
 
-class TodoResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    todo_id: int
-    todo_text: str
-    creation_date: datetime
-    is_done: bool
-
-
 class TodoRequest(BaseModel):
     text: str = Field(max_length=4096)
+
 
 r = redis.Redis.from_url(settings.redis_url)
 

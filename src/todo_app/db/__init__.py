@@ -1,14 +1,13 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy import event
 from sqlalchemy.orm import DeclarativeBase
-
 
 from todo_app.settings import settings
 
@@ -18,6 +17,7 @@ if settings.postgres_ssl == "true":
     connect_args["ssl"] = True
 
 engine = create_async_engine(settings.db_url, connect_args=connect_args)
+
 
 class Base(DeclarativeBase):
     pass
@@ -38,6 +38,7 @@ async def get_session() -> AsyncGenerator[AsyncSession]:
     finally:
         await session.close()
 
+
 @asynccontextmanager
 async def context_session() -> AsyncGenerator[AsyncSession]:
     session = local_session()
@@ -50,6 +51,7 @@ async def context_session() -> AsyncGenerator[AsyncSession]:
         raise
     finally:
         await session.close()
+
 
 @event.listens_for(engine.sync_engine, "connect")
 def enable_foreign_key_enforcement(dbapi_connection, connection_record):

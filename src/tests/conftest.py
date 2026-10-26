@@ -11,6 +11,7 @@ from todo_app.services.todo import todo_rate_limiter
 def no_rate_limit():
     pass
 
+
 app.dependency_overrides[auth_rate_limiter] = no_rate_limit
 app.dependency_overrides[todo_rate_limiter] = no_rate_limit
 
@@ -36,9 +37,7 @@ def mock_with_session():
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
     from todo_app.db import Base, engine
-    from todo_app.db import models as models
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-

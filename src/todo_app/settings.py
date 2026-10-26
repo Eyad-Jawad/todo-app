@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=os.getenv("ENV_FILE", ".env"),
         env_file_encoding="utf-8",
-        extra="ignore"
+        extra="ignore",
     )
     secret_str: SecretStr
     algorithm: str = "HS256"
@@ -28,7 +28,6 @@ class Settings(BaseSettings):
 
     redis_url: str = "redis://localhost:6380"
     redis_host: str = "localhost"
-
 
 
 settings = Settings()

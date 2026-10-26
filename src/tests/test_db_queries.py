@@ -1,24 +1,23 @@
 from datetime import UTC, datetime
-from unittest.mock import patch
 
 import pytest
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
-from todo_app.db.models import Todo, User
 from todo_app.db import context_session
+from todo_app.db.models import Todo
 from todo_app.db.queries import (
+    InvalidToken,
+    add_refresh_token,
     add_todo,
     add_user,
     delete_todo,
     delete_user,
+    get_refresh_token,
     get_todo,
     get_todos,
     get_user,
-    revoke_token,
-    add_refresh_token,
-    get_refresh_token,
     is_refresh_token_valid,
-    InvalidToken,
+    revoke_token,
     toggle_todo,
 )
 
@@ -118,7 +117,6 @@ async def test_toggle():
         assert todo.is_done == True
 
 
-
 @pytest.mark.asyncio
 async def test_get_user_by_id_with_existing_user():
     async with context_session() as session:
@@ -147,6 +145,7 @@ async def test_get_user_by_username_with_existing_user():
     assert user.id == 1
     assert user.username == "TestUser"
     assert user.hash == "Anything"
+
 
 @pytest.mark.asyncio
 async def test_get_user_by_username_with_non_existing_user():
@@ -297,6 +296,7 @@ async def test_revoke_token_with_existing_token():
         await revoke_token(session, "Token")
 
         assert token.is_valid == False
+
 
 @pytest.mark.asyncio
 async def test_add_todo_with_existing_user():

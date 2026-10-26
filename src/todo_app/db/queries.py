@@ -1,6 +1,6 @@
-from typing import overload
 from collections.abc import Sequence
 from datetime import UTC, datetime
+from typing import overload
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,22 +52,19 @@ async def toggle_todo(session: AsyncSession, todo: Todo) -> None:
 
 
 @overload
-async def get_user(session: AsyncSession, user_id: int) -> User | None: ...
+async def get_user(session: AsyncSession, identifier: int) -> User | None: ...
+
 
 @overload
-async def get_user(session: AsyncSession, username: str) -> User | None: ...
+async def get_user(session: AsyncSession, identifier: str) -> User | None: ...
 
 
 async def get_user(session: AsyncSession, identifier: int | str) -> User | None:
     pre_stmt = select(User).options(selectinload(User.todos))
     if isinstance(identifier, int):
-        stmt = (
-            pre_stmt.where(User.id == identifier)
-        )
+        stmt = pre_stmt.where(User.id == identifier)
     else:
-        stmt = (
-            pre_stmt.where(User.username == identifier)
-        )
+        stmt = pre_stmt.where(User.username == identifier)
 
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
@@ -114,10 +111,7 @@ async def get_refresh_token(
 async def is_refresh_token_valid(session: AsyncSession, token: str) -> bool:
     refresh_token = await get_refresh_token(session, token)
 
-    if refresh_token and refresh_token.is_valid:
-        return True
-
-    return False
+    return bool(refresh_token and refresh_token.is_valid)
 
 
 async def revoke_token(session: AsyncSession, token: str) -> None:

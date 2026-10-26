@@ -68,7 +68,9 @@ async def get_user_dependncy(
         # Either that, or our production got compromised
         # and the secret key was leaked.
 
-    if decoded.get("ref") and not (await is_refresh_token_valid(session, token)):
+    if decoded.get("ref") and not (
+        await is_refresh_token_valid(session, token)
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or expired refresh token.",
