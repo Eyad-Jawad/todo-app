@@ -16,7 +16,7 @@ from todo_app.db.queries import (
     add_user,
     delete_user,
     get_user,
-    get_user_by_token,
+    is_refresh_token_valid,
     revoke_token,
 )
 from todo_app.services.utils import (
@@ -28,53 +28,58 @@ from todo_app.services.utils import (
 )
 from todo_app.settings import settings
 
+router = APIRouter()
+
 REQUESTS_LIMIT = 10
 REQUESTS_LIMIT_TIME = 60 * 5
-router = APIRouter()
+auth_rate_limiter = rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME)
 
 ph = PasswordHasher()
 
-oaith2_scheme = OAuth2PasswordBearer(token_url="/api/token")
-_refresh_token_oauth2_scheme = OAuth2PasswordBearer(token_url="/api/log_in")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
+_refresh_token_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/log_in")
 
 
 async def get_user_dependncy(
-    token: Annotated[str, Depends(_refresh_token_oauth2_scheme)],
+    token: Annotated[str, Depends(oauth2_scheme)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> User:
-    decoded = jwt.decode(token)
-    if decoded.get("exp") < datetime.now(UTC):
+    try:
+        decoded = jwt.decode(
+            token,
+            settings.secret_str.get_secret_value(),
+            algorithms=[settings.algorithm],
+        )
+    except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Expired token."
         )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token."
+        )
 
-    if not decoded.get("ref"):
-        user = await get_user(session, decoded["sub"])
-
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token, account was deleted.",
-            )
+    user = await get_user(session, int(decoded["sub"]))
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token, account was deleted.",
+        )
         # Either that, or our production got compromised
         # and the secret key was leaked.
 
-        return user
-
-    user = await get_user_by_token(session, token)
-
-    if user is None:
+    if decoded.get("ref") and not (await is_refresh_token_valid(session, token)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or expired token.",
+            detail="Invalid or expired refresh token.",
         )
 
     return user
 
 
 @router.post(
-    "/auth/sign_up",
-    dependencies=[Depends(rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME))],
+    "/api/auth/sign_up",
+    dependencies=[Depends(auth_rate_limiter)],
     status_code=status.HTTP_201_CREATED,
 )
 async def sign_up(
@@ -94,8 +99,8 @@ async def sign_up(
 
 
 @router.post(
-    "/auth/log_in",
-    dependencies=[Depends(rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME))],
+    "/api/auth/log_in",
+    dependencies=[Depends(auth_rate_limiter)],
     status_code=status.HTTP_200_OK,
     response_model=RefreshTokenResponse,
 )
@@ -110,29 +115,29 @@ async def log_in(
             detail="Invalid username or password.",
         )
 
-    refresh_token = create_json_web_token(
-        data={"sub": user.id, "ref": True}, is_access_token=False
+    refresh_token_str = create_json_web_token(
+        data={"sub": str(user.id)}, is_access_token=False
     )
-    await add_refresh_token(session, user.id, refresh_token)
+    refresh_token = await add_refresh_token(session, user.id, refresh_token_str)
 
     return refresh_token
 
 
 @router.post(
-    "/auth/log_out",
-    dependencies=[Depends(rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME))],
+    "/api/auth/log_out",
+    dependencies=[Depends(auth_rate_limiter)],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def log_out(
-    user: Annotated[User, Depends(get_user_dependncy)],
+    token: Annotated[str, Depends(_refresh_token_oauth2_scheme)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
-    await revoke_token(session, user)
+    await revoke_token(session, token)
 
 
 @router.delete(
-    "/auth/delete_account",
-    dependencies=[Depends(rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME))],
+    "/api/auth/delete_account",
+    dependencies=[Depends(auth_rate_limiter)],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_account(
@@ -151,14 +156,14 @@ async def delete_account(
 
 @router.get(
     "/api/token",
-    dependencies=[Depends(rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME))],
+    dependencies=[Depends(auth_rate_limiter)],
     status_code=status.HTTP_200_OK,
     response_model=AccessTokenResponse,
 )
 async def get_access_token(user: Annotated[User, Depends(get_user_dependncy)]):
     return {
         "token": create_json_web_token(
-            data={"sub": user.id, "ref": False}, is_access_token=True
+            data={"sub": user.id}, is_access_token=True
         ),
         "expiration_date": datetime.now(UTC)
         + timedelta(minutes=settings.access_token_expire_time_in_minutes),

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy import event
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -18,20 +19,40 @@ if settings.postgres_ssl == "true":
 
 engine = create_async_engine(settings.db_url, connect_args=connect_args)
 
-
 class Base(DeclarativeBase):
     pass
 
 
-local_session = async_sessionmaker(bind=engine)
+local_session = async_sessionmaker(bind=engine, expire_on_commit=False)
 
+
+async def get_session() -> AsyncGenerator[AsyncSession]:
+    session = local_session()
+
+    try:
+        yield session
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
 
 @asynccontextmanager
-async def get_session() -> AsyncGenerator[AsyncSession]:
-    try:
-        session = local_session()
-        yield session
+async def context_session() -> AsyncGenerator[AsyncSession]:
+    session = local_session()
 
-    finally:
+    try:
+        yield session
         await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
         await session.close()
+
+@event.listens_for(engine.sync_engine, "connect")
+def enable_foreign_key_enforcement(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()

@@ -1,12 +1,12 @@
 all:
-    uv run pytest
+    ENV_FILE=.env.testing uv run pytest
     uv run ruff format --check .
     uv run ruff check .
     uv run mypy .
     echo "Everything looks good!"
 
 test: # for local testing
-    uv run pytest -k "not test_integration"
+    ENV_FILE=.env.testing uv run pytest
 
 lint:
     uv run ruff format .

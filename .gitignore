@@ -1,5 +1,7 @@
 # Creds
 *.env
+# *.env.development
+# *.env.testing
 
 # Python-generated files
 __pycache__/
@@ -12,8 +14,6 @@ wheels/
 
 # Virtual environments
 .venv
-
-.vs
 
 # Database files
 todo_app.db
@@ -28,3 +28,6 @@ dump.rdb
 
 .vs/
 .vscode/
+
+# Personal Notes File
+Notes.md

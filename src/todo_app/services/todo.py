@@ -9,6 +9,7 @@ from todo_app.services.auth import get_user_dependncy
 from todo_app.services.utils import TodoRequest, TodoResponse, rate_limiter
 
 router = APIRouter()
+todo_rate_limiter = rate_limiter() # In case we want to change some stuff
 
 
 async def _get_todo(
@@ -29,7 +30,7 @@ async def _get_todo(
 
 @router.get(
     "/api/todos/all",
-    dependencies=[Depends(rate_limiter())],
+    dependencies=[Depends(todo_rate_limiter)],
     response_model=list[TodoResponse],
     status_code=status.HTTP_200_OK,
 )
@@ -47,7 +48,7 @@ async def get_todos(
 
 @router.post(
     "/api/todos/add",
-    dependencies=[Depends(rate_limiter())],
+    dependencies=[Depends(todo_rate_limiter)],
     response_model=TodoResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -67,7 +68,7 @@ async def add_todo(
 
 @router.patch(
     "/api/todos/toggle/{id}",
-    dependencies=[Depends(rate_limiter())],
+    dependencies=[Depends(todo_rate_limiter)],
     response_model=TodoResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -85,7 +86,7 @@ async def toggle_todo(
 
 @router.delete(
     "/api/todos/delete{id}",
-    dependencies=[Depends(rate_limiter())],
+    dependencies=[Depends(todo_rate_limiter)],
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_todo(
@@ -100,7 +101,7 @@ async def delete_todo(
 
 @router.get(
     "/api/todos/{id}",
-    dependencies=[Depends(rate_limiter())],
+    dependencies=[Depends(todo_rate_limiter)],
     response_model=TodoResponse,
     status_code=status.HTTP_200_OK,
 )

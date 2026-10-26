@@ -1,3 +1,4 @@
+from typing import overload
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
@@ -30,7 +31,7 @@ async def add_todo(session: AsyncSession, user_id: int, text: str) -> Todo:
     todo = Todo(
         user_id=user_id,
         todo_text=text,
-        creation_date=datetime.now(tz=UTC),
+        creation_date=datetime.now(UTC),
         is_done=False,
     )
 
@@ -50,10 +51,24 @@ async def toggle_todo(session: AsyncSession, todo: Todo) -> None:
     await session.commit()
 
 
-async def get_user(session: AsyncSession, user_id: int) -> User | None:
-    stmt = (
-        select(User).options(selectinload(User.todos)).where(User.id == user_id)
-    )
+@overload
+async def get_user(session: AsyncSession, user_id: int) -> User | None: ...
+
+@overload
+async def get_user(session: AsyncSession, username: str) -> User | None: ...
+
+
+async def get_user(session: AsyncSession, identifier: int | str) -> User | None:
+    pre_stmt = select(User).options(selectinload(User.todos))
+    if isinstance(identifier, int):
+        stmt = (
+            pre_stmt.where(User.id == identifier)
+        )
+    else:
+        stmt = (
+            pre_stmt.where(User.username == identifier)
+        )
+
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -75,14 +90,16 @@ async def delete_user(session: AsyncSession, user: User) -> None:
 
 async def add_refresh_token(
     session: AsyncSession, user_id: int, token: str
-) -> None:
-    await session.add(
-        RefreshToken(
-            token=token,
-            user_id=user_id,
-        )
+) -> RefreshToken:
+    refresh_token = RefreshToken(
+        token=token,
+        user_id=user_id,
     )
+
+    session.add(refresh_token)
     await session.commit()
+
+    return refresh_token
 
 
 async def get_refresh_token(
@@ -94,13 +111,13 @@ async def get_refresh_token(
     return result.scalar_one_or_none()
 
 
-async def get_user_by_token(session: AsyncSession, token: str) -> User | None:
+async def is_refresh_token_valid(session: AsyncSession, token: str) -> bool:
     refresh_token = await get_refresh_token(session, token)
 
     if refresh_token and refresh_token.is_valid:
-        return refresh_token.user
+        return True
 
-    return None
+    return False
 
 
 async def revoke_token(session: AsyncSession, token: str) -> None:
@@ -108,3 +125,5 @@ async def revoke_token(session: AsyncSession, token: str) -> None:
 
     if refresh_token is None or not refresh_token.is_valid:
         raise InvalidToken("Token doesn't exist or already revoked")
+
+    refresh_token.is_valid = False

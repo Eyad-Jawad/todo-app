@@ -28,5 +28,5 @@ class RefreshToken(Base):
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     user: Mapped["User"] = relationship(
-        "refresh_tokens",
+        back_populates="refresh_tokens",
     )

@@ -1,11 +1,9 @@
-import os
 import time
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 import jwt
 import redis
-from dotenv import load_dotenv
 from fastapi import HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
@@ -31,7 +29,7 @@ class TodoResponse(BaseModel):
     todo_id: int
     todo_text: str
     creation_date: datetime
-    is_done = Field(default=True)
+    is_done: bool = Field(default=True)
 
 
 class UserResponse(BaseModel):
@@ -69,11 +67,7 @@ class TodoResponse(BaseModel):
 class TodoRequest(BaseModel):
     text: str = Field(max_length=4096)
 
-
-load_dotenv()
-REDIS_URL = os.environ["REDIS_URL"]
-
-r = redis.Redis.from_url(REDIS_URL)
+r = redis.Redis.from_url(settings.redis_url)
 
 
 def rate_limiter(
@@ -124,11 +118,12 @@ def create_json_web_token(
         expiration_date = datetime.now(UTC) + timedelta(
             days=settings.refresh_token_expire_time_in_days
         )
+        to_encode.update({"ref": True})
 
     to_encode.update({"exp": expiration_date})
 
     return jwt.encode(
         to_encode,
-        settings.secret_key.get_secret_value(),
+        settings.secret_str.get_secret_value(),
         algorithm=settings.algorithm,
     )

@@ -60,7 +60,7 @@ REDIS_HOST
 You don't have to worry about anything else, but I suggest you run `just test` after you get it up to make sure everything is ok.
 
 ### Tests
-Test coverage percent is not informative enough at this point, but it's `94%`, with one integration test if you set up the enviroment, `GitHub Actions` take care of that in the deployment of the app.
+Test coverage percent is not informative enough at this point, but it's `90%`, with one integration test if you set up the enviroment, `GitHub Actions` take care of that in the deployment of the app.
 
 ## Interface
 These are images of the interface:    

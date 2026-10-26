@@ -2,303 +2,316 @@ from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
-import pytest_asyncio
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 from todo_app.db.models import Todo, User
+from todo_app.db import context_session
 from todo_app.db.queries import (
     add_todo,
     add_user,
     delete_todo,
     delete_user,
+    get_todo,
     get_todos,
     get_user,
-    get_user_session,
     revoke_token,
-    set_token,
+    add_refresh_token,
+    get_refresh_token,
+    is_refresh_token_valid,
+    InvalidToken,
     toggle_todo,
 )
 
 
-@pytest_asyncio.fixture
-async def mock_session():
+@pytest.mark.asyncio
+async def test_get_todos():
+    async with context_session() as session:
+        assert await get_todos(session, 1) == []
+        await add_user(session, "TestUser1", "Anything")
+        todo1 = await add_todo(session, 1, "Todo1")
+        todo2 = await add_todo(session, 1, "Todo2")
 
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    local_session = async_sessionmaker(bind=engine)
-    session = local_session()
+        todos = list(await get_todos(session, 1))
 
-    from todo_app.db import Base
+        assert todos[0].todo_id == 1
+        assert todos[0].todo_text == "Todo1"
+        assert todos[0].is_done == False
+        assert todos[0].user_id == 1
+        assert todos[0].creation_date is not None
+        assert todos[0] == todo1
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-        yield session
-        await session.close()
-
-    await engine.dispose()
+        assert todos[1].todo_id == 2
+        assert todos[1].todo_text == "Todo2"
+        assert todos[1].is_done == False
+        assert todos[1].user_id == 1
+        assert todos[1].creation_date is not None
+        assert todos[1] == todo2
 
 
 @pytest.mark.asyncio
-async def test_toggle(mock_session):
-    todo = Todo(
-        user_id=1,
-        todo_text="str",
-        is_done=False,
-        creation_date=datetime.now(tz=UTC),
-    )
-    mock_session.add(todo)
-    await mock_session.commit()
+async def test_get_todo_with_existing_todo():
+    async with context_session() as session:
+        await add_user(session, "TestUser", "Anything")
+        await add_todo(session, 1, "Anything")
 
-    stmt = select(Todo)
-    result = await mock_session.execute(stmt)
-    todo = result.scalar_one()
+        todo = await get_todo(session, 1, 1)
 
-    await toggle_todo(mock_session, todo)
-
-    stmt = select(Todo)
-    result = await mock_session.execute(stmt)
-    todo = result.scalar_one()
-
-    assert todo.is_done == True
-
-
-@pytest.mark.asyncio
-async def test_delete(mock_session):
-    todo = Todo(
-        user_id=1,
-        todo_text="str",
-        is_done=True,
-        creation_date=datetime.now(tz=UTC),
-    )
-    mock_session.add(todo)
-    await mock_session.commit()
-
-    stmt = select(Todo)
-    result = await mock_session.execute(stmt)
-    todo = result.scalar_one()
-
-    await delete_todo(mock_session, todo)
-
-    stmt = select(Todo)
-    result = await mock_session.execute(stmt)
-    result_todo = result.scalar_one_or_none()
-
-    assert result_todo is None
-
-
-@pytest.mark.asyncio
-@patch("todo_app.db.queries.UTC", "val")
-@patch("todo_app.db.queries.datetime")
-async def test_add_todo(mock_time, mock_session):
-    date = datetime.now(tz=UTC)
-    mock_time.now.return_value = date
-
-    await add_todo(mock_session, 1, "str")
-
-    stmt = select(Todo)
-    result = await mock_session.execute(stmt)
-    todo = result.scalar_one()
-
-    assert todo.user_id == 1
-    assert todo.todo_text == "str"
-    assert todo.creation_date == date.replace(tzinfo=None)
+    assert todo.todo_text == "Anything"
     assert todo.is_done == False
-
-    mock_time.now.assert_called_once_with(tz="val")
-
-
-@pytest.mark.asyncio
-async def test_get_todos(mock_session):
-    todos = [
-        Todo(
-            user_id=2,
-            todo_text="str",
-            is_done=True,
-            creation_date=datetime.now(tz=UTC),
-        ),
-        Todo(
-            user_id=2,
-            todo_text="str2",
-            is_done=False,
-            creation_date=datetime.now(tz=UTC),
-        ),
-    ]
-
-    mock_session.add(todos[0])
-    mock_session.add(todos[1])
-    await mock_session.commit()
-
-    assert list(await get_todos(mock_session, 2)) == todos
+    assert todo.user_id == 1
+    assert todo.creation_date is not None
 
 
 @pytest.mark.asyncio
-async def test_get_user_with_no_entry(mock_session):
-    assert await get_user(mock_session, "rand") is None
+async def test_get_todo_with_no_todo():
+    async with context_session() as session:
+        todo = await get_todo(session, 1, 1)
+
+    assert todo is None
 
 
 @pytest.mark.asyncio
-async def test_get_user_with_one_entry(mock_session):
-    mock_session.add(
-        User(
-            username="Noice",
-            hash="Anything",
-        )
-    )
-    await mock_session.commit()
+async def test_get_todo_with_no_user():
+    with pytest.raises(IntegrityError):
+        async with context_session() as session:
+            user = await get_user(session, 1)
+            assert user is None
 
-    user = await get_user(mock_session, "Noice")
+            await add_todo(session, 1, "Anything")
 
-    assert user.username == "Noice"
+            await get_todo(session, 1, 1)
+
+
+@pytest.mark.asyncio
+async def test_delete_with_existing_todo():
+    async with context_session() as session:
+        await add_user(session, "TestUser", "Anything")
+        todo = await add_todo(session, 1, "Anything")
+
+        await delete_todo(session, todo)
+
+        assert await get_todo(session, 1, 1) is None
+
+
+@pytest.mark.asyncio
+async def test_delete_with_non_existing_todo():
+    with pytest.raises(InvalidRequestError):
+        async with context_session() as session:
+            todo = Todo(
+                user_id=1,
+                todo_text="str",
+                is_done=False,
+                creation_date=datetime.now(tz=UTC),
+            )
+
+            await delete_todo(session, todo)
+
+
+@pytest.mark.asyncio
+async def test_toggle():
+    async with context_session() as session:
+        await add_user(session, "TestUser", "Anything")
+        todo = await add_todo(session, 1, "Anything")
+
+        await toggle_todo(session, todo)
+
+        assert todo.is_done == True
+
+
+
+@pytest.mark.asyncio
+async def test_get_user_by_id_with_existing_user():
+    async with context_session() as session:
+        await add_user(session, "TestUser", "Anything")
+        user = await get_user(session, 1)
+
+    assert user.id == 1
+    assert user.username == "TestUser"
     assert user.hash == "Anything"
 
 
 @pytest.mark.asyncio
-async def test_get_user_sesison_with_no_entry(mock_session):
-    assert await get_user_session(mock_session, "") is None
+async def test_get_user_by_id_with_non_existing_user():
+    async with context_session() as session:
+        user = await get_user(session, 1)
+
+    assert user is None
 
 
 @pytest.mark.asyncio
-async def test_get_user_sesison_with_empty_entry(mock_session):
-    mock_session.add(
-        User(
-            username="Noice",
-            hash="Anything",
-        )
-    )
+async def test_get_user_by_username_with_existing_user():
+    async with context_session() as session:
+        await add_user(session, "TestUser", "Anything")
+        user = await get_user(session, "TestUser")
 
-    assert await get_user_session(mock_session, "") is None
-
-
-@pytest.mark.asyncio
-async def test_get_user_sesison_with_one_entry(mock_session):
-    mock_session.add(User(username="Noice", hash="Anything", access_token="T"))
-
-    user = await get_user_session(mock_session, "T")
-
-    assert user.username == "Noice"
+    assert user.id == 1
+    assert user.username == "TestUser"
     assert user.hash == "Anything"
-    assert user.access_token == "T"
+
+@pytest.mark.asyncio
+async def test_get_user_by_username_with_non_existing_user():
+    async with context_session() as session:
+        user = await get_user(session, "TestUser")
+
+    assert user is None
 
 
 @pytest.mark.asyncio
-@patch("todo_app.db.queries.uuid4")
-async def test_add_user(mock_uuid, mock_session):
-    mock_uuid.return_value = "token"
+async def test_add_user_with_valid_input():
+    async with context_session() as session:
+        await add_user(session, "TestUser", "Anything")
 
-    assert await add_user(mock_session, "Noice", "Anything") == "token"
+        user = await get_user(session, 1)
 
-    stmt = select(User)
-    result = await mock_session.execute(stmt)
-    user = result.scalar_one()
-
-    assert user.username == "Noice"
+    assert user.id == 1
+    assert user.username == "TestUser"
     assert user.hash == "Anything"
-    assert user.access_token == "token"
 
 
 @pytest.mark.asyncio
-@patch("todo_app.db.queries.uuid4")
-async def test_set_token_empty(mock_uuid, mock_session):
-    mock_uuid.return_value = "token"
+async def test_add_user_with_duplicate_user():
+    with pytest.raises(IntegrityError):
+        async with context_session() as session:
+            await add_user(session, "TestUser", "Anything")
 
-    user = User(
-        username="Noice",
-        hash="Anything",
-    )
-    mock_session.add(user)
-    await mock_session.commit()
+            user = await get_user(session, 1)
 
-    assert await set_token(mock_session, user) == "token"
+            assert user.id == 1
+            assert user.username == "TestUser"
+            assert user.hash == "Anything"
 
-    stmt = select(User)
-    result = await mock_session.execute(stmt)
-    user = result.scalar_one()
-
-    assert user.username == "Noice"
-    assert user.hash == "Anything"
-    assert user.access_token == "token"
+            await add_user(session, "TestUser", "Anything")
 
 
 @pytest.mark.asyncio
-@patch("todo_app.db.queries.uuid4")
-async def test_set_token_overwrite(mock_uuid, mock_session):
-    mock_uuid.return_value = "token"
+async def test_delete_user_with_new_user():
+    async with context_session() as session:
+        await add_user(session, "TestUser", "Anything")
 
-    user = User(
-        username="Noice",
-        hash="Anything",
-        access_token="T",
-    )
-    mock_session.add(user)
-    await mock_session.commit()
+        user = await get_user(session, 1)
 
-    assert await set_token(mock_session, user) == "token"
+        await delete_user(session, user)
 
-    stmt = select(User)
-    result = await mock_session.execute(stmt)
-    user = result.scalar_one()
-
-    assert user.username == "Noice"
-    assert user.hash == "Anything"
-    assert user.access_token == "token"
+        user = await get_user(session, 1)
+        assert user is None
 
 
 @pytest.mark.asyncio
-async def test_revoke_token(mock_session):
-    user = User(
-        username="Noice",
-        hash="Anything",
-        access_token="T",
-    )
-    mock_session.add(user)
-    await mock_session.commit()
+async def test_delete_user_with_user_with_relationships():
+    async with context_session() as session:
+        await add_user(session, "TestUser", "Anything")
+        await add_todo(session, 1, "Noice")
+        await add_refresh_token(session, 1, "Token")
 
-    await revoke_token(mock_session, user)
+        user = await get_user(session, 1)
 
-    stmt = select(User)
-    result = await mock_session.execute(stmt)
-    user = result.scalar_one()
+        await delete_user(session, user)
 
-    assert user.username == "Noice"
-    assert user.hash == "Anything"
-    assert user.access_token == None
-
-
-@pytest.mark.asyncio
-async def test_delete_user(mock_session):
-    user = User(
-        username="Noice",
-        hash="Anything",
-        access_token="T",
-    )
-
-    mock_session.add(user)
-    await mock_session.commit()
-
-    stmt = select(User)
-    result = await mock_session.execute(stmt)
-    user = result.scalar_one_or_none()
-
-    todo = Todo(
-        user_id=user.id,
-        todo_text="meh",
-        is_done=False,
-        creation_date=datetime.now(tz=UTC),
-    )
-
-    mock_session.add(todo)
-    await mock_session.commit()
-
-    await delete_user(mock_session, user)
-
-    stmt = select(User)
-    result = await mock_session.execute(stmt)
-    user = result.scalar_one_or_none()
-
-    stmt = select(Todo)
-    result = await mock_session.execute(stmt)
-    todo = result.scalar_one_or_none()
+        user = await get_user(session, 1)
+        todo = await get_todo(session, 1, 1)
+        refresh_token = await get_refresh_token(session, "Token")
 
     assert user is None
     assert todo is None
+    assert refresh_token is None
+
+
+@pytest.mark.asyncio
+async def test_add_refresh_token_with_existing_user():
+    async with context_session() as session:
+        await add_user(session, "TestUser", "Anything")
+        await add_refresh_token(session, 1, "Token")
+
+        token = await get_refresh_token(session, "Token")
+
+    assert token.expiration_date is not None
+    assert token.is_valid
+    assert token.user_id == 1
+
+
+@pytest.mark.asyncio
+async def test_add_refresh_token_with_non_existing_user():
+    with pytest.raises(IntegrityError):
+        async with context_session() as session:
+            await add_refresh_token(session, 1, "Token")
+
+
+@pytest.mark.asyncio
+async def test_get_refresh_token_with_non_existing_token():
+    async with context_session() as session:
+        token = await get_refresh_token(session, "Token")
+        assert token is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("is_valid"),
+    [True, False],
+)
+async def test_validate_token_with_existing_token(is_valid):
+    async with context_session() as session:
+        await add_user(session, "TestUser", "Anything")
+        await add_refresh_token(session, 1, "Token")
+
+        token = await get_refresh_token(session, "Token")
+
+        token.is_valid = is_valid
+
+        assert await is_refresh_token_valid(session, "Token") == is_valid
+
+
+@pytest.mark.asyncio
+async def test_validate_token_with_non_existing_token():
+    async with context_session() as session:
+        assert await is_refresh_token_valid(session, "Token") == False
+
+
+@pytest.mark.asyncio
+async def test_revoke_token_with_revoked_token():
+    with pytest.raises(InvalidToken):
+        async with context_session() as session:
+            await add_user(session, "TestUser", "Anything")
+            await add_refresh_token(session, 1, "Token")
+
+            token = await get_refresh_token(session, "Token")
+            token.is_valid = False
+
+            await revoke_token(session, "Token")
+
+
+@pytest.mark.asyncio
+async def test_revoke_token_with_non_existing_token():
+    with pytest.raises(InvalidToken):
+        async with context_session() as session:
+            await revoke_token(session, "Token")
+
+
+@pytest.mark.asyncio
+async def test_revoke_token_with_existing_token():
+    async with context_session() as session:
+        await add_user(session, "TestUser", "Anything")
+        await add_refresh_token(session, 1, "Token")
+
+        token = await get_refresh_token(session, "Token")
+
+        await revoke_token(session, "Token")
+
+        assert token.is_valid == False
+
+@pytest.mark.asyncio
+async def test_add_todo_with_existing_user():
+    async with context_session() as session:
+        await add_user(session, "TestUser", "Anything")
+        todo = await add_todo(session, 1, "Todo")
+
+    assert todo.user_id == 1
+    assert todo.todo_text == "Todo"
+    assert todo.creation_date is not None
+    assert todo.is_done == False
+
+
+@pytest.mark.asyncio
+async def test_add_todo_with_non_existing_user():
+    with pytest.raises(IntegrityError):
+        async with context_session() as session:
+            await add_todo(session, 1, "Todo")

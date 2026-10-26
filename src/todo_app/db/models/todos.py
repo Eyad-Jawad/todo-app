@@ -14,9 +14,9 @@ class Todo(Base):
     __tablename__ = "todos"
 
     todo_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    todo_text: Mapped[str] = mapped_column()
+    todo_text: Mapped[str]
     creation_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    is_done: Mapped[bool] = mapped_column()
+    is_done: Mapped[bool]
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     user: Mapped["User"] = relationship(

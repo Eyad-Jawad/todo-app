@@ -1,10 +1,12 @@
+import os
+
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=os.getenv("ENV_FILE", ".env"),
         env_file_encoding="utf-8",
         extra="ignore"
     )
@@ -20,12 +22,12 @@ class Settings(BaseSettings):
     db_name: str = "todo"
 
     postgres_ssl: str = "false"
-    postgres_user: str
-    postgres_password: str
-    postgres_host: str
+    postgres_user: str | None = None
+    postgres_wwpassword: str | None = None
+    postgres_host: str | None = None
 
-    redis_host: str
-    redis_url: str
+    redis_url: str = "redis://localhost:6380"
+    redis_host: str = "localhost"
 
 
 
