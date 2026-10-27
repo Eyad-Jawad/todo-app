@@ -23,15 +23,13 @@ from todo_app.services.utils import (
     RefreshTokenResponse,
     create_json_web_token,
     get_user_dependncy,
-    rate_limiter,
+    ip_rate_limiter,
 )
 from todo_app.settings import settings
 
 router = APIRouter()
 
-REQUESTS_LIMIT = 10
-REQUESTS_LIMIT_TIME = 60 * 5
-auth_rate_limiter = rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME)
+auth_rate_limiter = ip_rate_limiter()
 
 ph = PasswordHasher()
 

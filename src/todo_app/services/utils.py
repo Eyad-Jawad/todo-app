@@ -117,16 +117,37 @@ def rate_limiter(
     window: int = 60,  # seconds
 ):
     async def dependency(
-        request: Request,
         user: Annotated[User, Depends(get_user_dependncy)],
     ):
-        identifier = user.id or (
-            request.client.host if request.client else None
-        )
+        now = int(time.time())
+        window_start = now - (now % window)
+
+        key = f"rl:{user.id}:{window_start}"
+        current = r.incr(key)
+
+        if current == 1:
+            r.expire(key, window)
+
+        elif current > limit:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Rate limit exceeded, please try again later.",
+            )
+
+    return dependency
+
+
+def ip_rate_limiter(
+    limit: int = 10,
+    window: int = 5 * 60,  # seconds
+):
+    async def dependency(request: Request):
+        identifier = request.client.host if request.client else None
+
         if identifier is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User has no ip or token.",
+                detail="Unable to identify sender.",
             )
 
         now = int(time.time())
