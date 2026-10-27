@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6380"
     redis_host: str = "localhost"
 
-    testing: str = "False"
+    testing: str = "false"
 
 
 settings = Settings()

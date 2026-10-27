@@ -4,9 +4,17 @@ from typing import Annotated
 
 import jwt
 import redis
-from fastapi import HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from todo_app.db import get_session
+from todo_app.db.models import User
+from todo_app.db.queries import (
+    get_user,
+    is_refresh_token_valid,
+)
 from todo_app.settings import settings
 
 
@@ -59,6 +67,48 @@ class TodoRequest(BaseModel):
     text: str = Field(max_length=4096)
 
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
+
+
+async def get_user_dependncy(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> User:
+    try:
+        decoded = jwt.decode(
+            token,
+            settings.secret_str.get_secret_value(),
+            algorithms=[settings.algorithm],
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Expired token."
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token."
+        )
+
+    user = await get_user(session, int(decoded["sub"]))
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token, account was deleted.",
+        )
+        # Either that, or our production got compromised
+        # and the secret key was leaked.
+
+    if decoded.get("ref") and not (
+        await is_refresh_token_valid(session, token)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or expired refresh token.",
+        )
+
+    return user
+
+
 r = redis.Redis.from_url(settings.redis_url)
 
 
@@ -66,9 +116,11 @@ def rate_limiter(
     limit: int = 30,
     window: int = 60,  # seconds
 ):
-    async def dependency(request: Request):
-        api_key = request.headers.get("access_key")
-        identifier = api_key or (
+    async def dependency(
+        request: Request,
+        user: Annotated[User, Depends(get_user_dependncy)],
+    ):
+        identifier = user.id or (
             request.client.host if request.client else None
         )
         if identifier is None:

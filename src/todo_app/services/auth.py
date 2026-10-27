@@ -1,7 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -16,7 +15,6 @@ from todo_app.db.queries import (
     add_user,
     delete_user,
     get_user,
-    is_refresh_token_valid,
     revoke_token,
 )
 from todo_app.services.utils import (
@@ -24,6 +22,7 @@ from todo_app.services.utils import (
     Creditential,
     RefreshTokenResponse,
     create_json_web_token,
+    get_user_dependncy,
     rate_limiter,
 )
 from todo_app.settings import settings
@@ -36,47 +35,7 @@ auth_rate_limiter = rate_limiter(REQUESTS_LIMIT, REQUESTS_LIMIT_TIME)
 
 ph = PasswordHasher()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
 _refresh_token_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/log_in")
-
-
-async def get_user_dependncy(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    session: Annotated[AsyncSession, Depends(get_session)],
-) -> User:
-    try:
-        decoded = jwt.decode(
-            token,
-            settings.secret_str.get_secret_value(),
-            algorithms=[settings.algorithm],
-        )
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Expired token."
-        )
-    except jwt.InvalidTokenError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token."
-        )
-
-    user = await get_user(session, int(decoded["sub"]))
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token, account was deleted.",
-        )
-        # Either that, or our production got compromised
-        # and the secret key was leaked.
-
-    if decoded.get("ref") and not (
-        await is_refresh_token_valid(session, token)
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or expired refresh token.",
-        )
-
-    return user
 
 
 @router.post(

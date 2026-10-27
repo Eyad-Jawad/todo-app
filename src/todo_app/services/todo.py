@@ -5,8 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from todo_app.db import get_session, queries
 from todo_app.db.models import Todo, User
-from todo_app.services.auth import get_user_dependncy
-from todo_app.services.utils import TodoRequest, TodoResponse, rate_limiter
+from todo_app.services.utils import (
+    TodoRequest,
+    TodoResponse,
+    get_user_dependncy,
+    rate_limiter,
+)
 
 router = APIRouter()
 todo_rate_limiter = rate_limiter()  # In case we want to change some stuff
